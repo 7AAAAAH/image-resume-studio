@@ -255,6 +255,10 @@ async function main() {
     assert(html.includes("data:image/svg+xml;base64,"), "exported HTML should embed the avatar");
     assert(html.includes("</strong>"), "exported HTML should preserve bold closing tags");
     assert(html.includes("@media print"), "exported HTML should include print styles");
+    assert(html.includes("--header-height"), "exported HTML should include design-token styles");
+    assert(html.includes('data-work-card="soft"'), "exported HTML should preserve the card variant");
+    assert(html.includes('.resume-page[data-template="classic"] .section-experience'), "exported HTML should include current template styles");
+    assert(Buffer.byteLength(html) > 30000, "exported HTML stylesheet appears incomplete");
 
     await evaluate(send, `(() => {
       document.querySelector('#moreButton').click();
