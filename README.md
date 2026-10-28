@@ -26,6 +26,7 @@
 ## 功能
 
 - **图片转模板**：从截图检测主色、头部高度、右下圆角与侧栏，自动匹配四种基础版式并给出置信度
+- **模板 DSL**：样式与内容分离，可导出 / 导入 `.resume-template.json`，方便复用与分享
 - **内容可编辑**：基本资料、个人总结、工作经历、项目经历、教育、技能、自定义经历
 - **四种版式**：蓝白经典 / 左侧信息栏 / 编辑感留白 / 极简线条
 - **细节可调**：主色、内容密度、页边距、头部轮廓、头像显隐
@@ -84,6 +85,8 @@ npm test
 主流开源简历工具（Reactive Resume、Magic Resume、JadeAI 等）大多采用"内容到内置模板"的路径；本项目的方向相反：**先理解原简历的视觉设计，再产出可编辑模板**。
 
 详细的竞品调研、差距与优化方向见 [docs/competitive-analysis.md](docs/competitive-analysis.md)。
+
+模板格式见 [schema/resume-template.schema.json](schema/resume-template.schema.json)，示例见 [examples/demo-template.json](examples/demo-template.json)。
 
 ## 路线图
 

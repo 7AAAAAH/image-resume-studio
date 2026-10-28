@@ -2,6 +2,22 @@
 
 所有重要变更都会记录在这里。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.3.0-alpha.1] - 2026-10-28
+
+### Added
+
+- 模板 DSL：`page` / `theme` / `layout` 三段式结构，样式与内容分离；
+- `schema/resume-template.schema.json` JSON Schema；
+- `examples/demo-template.json` 示例模板；
+- `••• > 导出模板 / 导入模板` 入口；
+- 模板导入时应用主色、头部轮廓、密度、页边距与头像显隐；
+- 模板导出 / 导入的 E2E 测试。
+
+### Changed
+
+- 模板非法值会归一化到安全默认值，不会破坏当前简历内容；
+- 单元测试增加到 14 个。
+
 ## [0.2.1] - 2026-10-28
 
 ### Added

@@ -59,6 +59,8 @@
       if (btn.dataset.action === "export-html") exportHtml();
       if (btn.dataset.action === "export-json") exportJson();
       if (btn.dataset.action === "import-json") $("#jsonInput").click();
+      if (btn.dataset.action === "export-template") exportTemplate();
+      if (btn.dataset.action === "import-template") $("#templateInput").click();
       if (btn.dataset.action === "reset") resetAll();
     });
     $("#chooseImageButton").addEventListener("click", () => $("#imageInput").click());
@@ -85,6 +87,12 @@
         renderEditor(); renderPreview(); updateStyleControls(); saveState();
         toast("JSON 内容已导入");
       } catch { toast("JSON 文件格式不正确"); }
+      e.target.value = "";
+    });
+    $("#templateInput").addEventListener("change", async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      await importTemplateFile(file);
       e.target.value = "";
     });
     $$("[data-close-modal]").forEach(btn => btn.addEventListener("click", () => { $("#importModal").hidden = true; $("#ocrModal").hidden = true; }));

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/7AAAAAH/image-resume-studio/schema/resume-template.schema.json",
+  "title": "Image Resume Studio Template",
+  "description": "A reusable visual template. It never contains resume content.",
+  "type": "object",
+  "required": ["version", "page", "theme", "layout"],
+  "properties": {
+    "version": { "const": 1 },
+    "name": { "type": "string", "maxLength": 60 },
+    "page": {
+      "type": "object",
+      "required": ["size", "margin"],
+      "properties": {
+        "size": { "const": "A4" },
+        "margin": { "enum": ["compact", "standard", "airy"] }
+      },
+      "additionalProperties": false
+    },
+    "theme": {
+      "type": "object",
+      "required": ["accent", "headerShape", "density", "showPhoto"],
+      "properties": {
+        "accent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "headerShape": { "enum": ["rounded", "straight", "arch"] },
+        "density": { "type": "integer", "minimum": 80, "maximum": 112 },
+        "showPhoto": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "required": ["template"],
+      "properties": {
+        "template": { "enum": ["classic", "sidebar", "editorial", "minimal"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

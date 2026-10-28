@@ -135,3 +135,42 @@ test("classifyLayoutSignals detects a tinted sidebar column", () => {
   assert.equal(result.template, "sidebar");
   assert.ok(result.confidence <= 0.9);
 });
+
+test("normalizeTemplate fills defaults and clamps invalid values", () => {
+  const empty = app.normalizeTemplate({});
+  assert.equal(empty.version, 1);
+  assert.equal(empty.page.margin, "standard");
+  assert.equal(empty.theme.accent, "#2563eb");
+  assert.equal(empty.theme.headerShape, "rounded");
+  assert.equal(empty.theme.density, 96);
+  assert.equal(empty.layout.template, "classic");
+
+  const clamped = app.normalizeTemplate({
+    theme: { accent: "red", headerShape: "nope", density: 999, showPhoto: false },
+    layout: { template: "nope" }
+  });
+  assert.equal(clamped.theme.accent, "#2563eb");
+  assert.equal(clamped.theme.headerShape, "rounded");
+  assert.equal(clamped.theme.density, 112);
+  assert.equal(clamped.theme.showPhoto, false);
+  assert.equal(clamped.layout.template, "classic");
+});
+
+test("templateFromState exports a reusable style without resume content", () => {
+  const template = app.templateFromState({
+    template: "sidebar",
+    accent: "#0c7b74",
+    headerShape: "straight",
+    density: 88,
+    margin: "compact",
+    showPhoto: false
+  });
+  assert.equal(template.layout.template, "sidebar");
+  assert.equal(template.theme.accent, "#0c7b74");
+  assert.equal(template.theme.headerShape, "straight");
+  assert.equal(template.theme.density, 88);
+  assert.equal(template.page.margin, "compact");
+  assert.equal(template.theme.showPhoto, false);
+  assert.ok(template.name.includes("左侧信息栏"));
+  assert.equal(Object.prototype.hasOwnProperty.call(template, "basics"), false);
+});

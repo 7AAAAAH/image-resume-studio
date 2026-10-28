@@ -1,4 +1,4 @@
-/*! Image Resume Studio v0.2.1 | MIT | Generated from src/*.js - do not edit app.js directly. */
+/*! Image Resume Studio v0.3.0-alpha.1 | MIT | Generated from src/*.js - do not edit app.js directly. */
 // Fragment 00: bootstrap, default data, constants, state and utilities.
 (() => {
   "use strict";
@@ -1208,6 +1208,104 @@
     toast("已恢复示例内容");
   }
 
+// Fragment 60: reusable template DSL import/export.
+  const TEMPLATE_VERSION = 1;
+  const TEMPLATE_MARGINS = ["compact", "standard", "airy"];
+  const HEADER_SHAPES = ["rounded", "straight", "arch"];
+  const TEMPLATE_IDS = PRESETS.map(preset => preset.id);
+
+  function normalizeDensity(value) {
+    if (value === undefined || value === null || value === "") return 96;
+    const number = Number(value);
+    if (!Number.isFinite(number)) return 96;
+    return Math.min(112, Math.max(80, Math.round(number)));
+  }
+
+  function normalizeTemplate(input) {
+    const data = input && typeof input === "object" ? input : {};
+    const theme = data.theme && typeof data.theme === "object" ? data.theme : {};
+    const page = data.page && typeof data.page === "object" ? data.page : {};
+    const layout = data.layout && typeof data.layout === "object" ? data.layout : {};
+
+    const template = TEMPLATE_IDS.includes(layout.template)
+      ? layout.template
+      : TEMPLATE_IDS.includes(data.template) ? data.template : "classic";
+    const headerShape = HEADER_SHAPES.includes(theme.headerShape)
+      ? theme.headerShape
+      : HEADER_SHAPES.includes(data.headerShape) ? data.headerShape : "rounded";
+    const margin = TEMPLATE_MARGINS.includes(page.margin)
+      ? page.margin
+      : TEMPLATE_MARGINS.includes(data.margin) ? data.margin : "standard";
+    const accentValue = typeof (theme.accent || data.accent) === "string" ? (theme.accent || data.accent) : "";
+    const accent = /^#[0-9a-f]{6}$/i.test(accentValue) ? accentValue.toLowerCase() : "#2563eb";
+    const showPhoto = (theme.showPhoto ?? data.showPhoto) !== false;
+
+    return {
+      version: TEMPLATE_VERSION,
+      name: String(data.name || "导入的模板").slice(0, 60),
+      page: { size: "A4", margin },
+      theme: {
+        accent,
+        headerShape,
+        density: normalizeDensity(theme.density ?? data.density),
+        showPhoto
+      },
+      layout: { template }
+    };
+  }
+
+  function templateFromState(source = state) {
+    const templateName = LAYOUT_TEMPLATE_NAMES[source.template] || "自定义版式";
+    const shapeName = source.headerShape === "rounded"
+      ? "圆角头部"
+      : source.headerShape === "arch" ? "拱形头部" : "直角头部";
+    return normalizeTemplate({
+      version: TEMPLATE_VERSION,
+      name: `${templateName} · ${shapeName}`,
+      page: { size: "A4", margin: source.margin },
+      theme: {
+        accent: source.accent,
+        headerShape: source.headerShape,
+        density: source.density,
+        showPhoto: source.showPhoto
+      },
+      layout: { template: source.template }
+    });
+  }
+
+  function applyTemplate(input) {
+    const template = normalizeTemplate(input);
+    state.template = template.layout.template;
+    state.headerShape = template.theme.headerShape;
+    state.density = template.theme.density;
+    state.margin = template.page.margin;
+    state.accent = template.theme.accent;
+    state.showPhoto = template.theme.showPhoto;
+    renderPreview();
+    updateStyleControls();
+    saveState();
+    return template;
+  }
+
+  function exportTemplate() {
+    const template = templateFromState();
+    const safeName = template.name.replace(/[\\/:*?"<>|]/g, "-");
+    downloadBlob(
+      new Blob([JSON.stringify(template, null, 2)], { type: "application/json" }),
+      `${safeName}.resume-template.json`
+    );
+    toast("已导出模板");
+  }
+
+  async function importTemplateFile(file) {
+    try {
+      const parsed = JSON.parse(await readFileAsText(file));
+      const template = applyTemplate(parsed);
+      toast(`已应用模板：${template.name}`);
+    } catch {
+      toast("模板文件格式不正确");
+    }
+  }
   // Fragment 90: event binding and app startup.
 
   function bindEvents() {
@@ -1269,6 +1367,8 @@
       if (btn.dataset.action === "export-html") exportHtml();
       if (btn.dataset.action === "export-json") exportJson();
       if (btn.dataset.action === "import-json") $("#jsonInput").click();
+      if (btn.dataset.action === "export-template") exportTemplate();
+      if (btn.dataset.action === "import-template") $("#templateInput").click();
       if (btn.dataset.action === "reset") resetAll();
     });
     $("#chooseImageButton").addEventListener("click", () => $("#imageInput").click());
@@ -1295,6 +1395,12 @@
         renderEditor(); renderPreview(); updateStyleControls(); saveState();
         toast("JSON 内容已导入");
       } catch { toast("JSON 文件格式不正确"); }
+      e.target.value = "";
+    });
+    $("#templateInput").addEventListener("change", async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      await importTemplateFile(file);
       e.target.value = "";
     });
     $$("[data-close-modal]").forEach(btn => btn.addEventListener("click", () => { $("#importModal").hidden = true; $("#ocrModal").hidden = true; }));

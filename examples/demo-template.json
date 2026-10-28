@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "蓝白经典 · 圆角头部",
+  "page": { "size": "A4", "margin": "standard" },
+  "theme": {
+    "accent": "#2563eb",
+    "headerShape": "rounded",
+    "density": 96,
+    "showPhoto": true
+  },
+  "layout": { "template": "classic" }
+}

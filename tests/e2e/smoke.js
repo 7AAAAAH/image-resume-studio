@@ -160,6 +160,48 @@ async function main() {
     assert(html.includes("</strong>"), "exported HTML should preserve bold closing tags");
     assert(html.includes("@media print"), "exported HTML should include print styles");
 
+    await evaluate(send, `(() => {
+      document.querySelector('#moreButton').click();
+      document.querySelector('[data-action="export-template"]').click();
+      return true;
+    })()`);
+    const templateFile = await waitForFile(downloadDir, ".resume-template.json", 15000);
+    const template = JSON.parse(fs.readFileSync(templateFile, "utf8"));
+    assert(template.version === 1, "template version missing");
+    assert(template.layout.template, "template layout missing");
+    assert(/^#[0-9a-f]{6}$/i.test(template.theme.accent), "template accent invalid");
+
+    await evaluate(send, `(() => {
+      const tpl = {
+        version: 1,
+        name: "E2E 模板",
+        page: { size: "A4", margin: "compact" },
+        theme: { accent: "#0c7b74", headerShape: "straight", density: 88, showPhoto: false },
+        layout: { template: "sidebar" }
+      };
+      const input = document.querySelector('#templateInput');
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([JSON.stringify(tpl)], "e2e.resume-template.json", { type: "application/json" }));
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    })()`);
+    await sleep(600);
+    const applied = await evaluate(send, `(() => ({
+      accent: document.querySelector('#accentColor').value,
+      shape: document.querySelector('#headerShape').value,
+      density: document.querySelector('#densityRange').value,
+      margin: document.querySelector('#pageMargin').value,
+      showPhoto: document.querySelector('#showPhoto').checked,
+      template: document.querySelector('#resumePage').dataset.template
+    }))()`);
+    assert(applied.accent === "#0c7b74", "template accent was not applied");
+    assert(applied.shape === "straight", "template header shape was not applied");
+    assert(applied.density === "88", "template density was not applied");
+    assert(applied.margin === "compact", "template margin was not applied");
+    assert(applied.showPhoto === false, "template photo setting was not applied");
+    assert(applied.template === "sidebar", "template layout was not applied");
+
     const errors = events.filter((event) =>
       event.method === "Runtime.exceptionThrown" ||
       (event.method === "Log.entryAdded" && event.params.entry.level === "error") ||
@@ -168,7 +210,7 @@ async function main() {
     assert(errors.length === 0, `console errors: ${errors.length}`);
 
     console.log("E2E OK");
-    console.log(JSON.stringify({ ...state, layout, exportedBytes: Buffer.byteLength(html) }, null, 2));
+    console.log(JSON.stringify({ ...state, layout, template, applied, exportedBytes: Buffer.byteLength(html) }, null, 2));
   } finally {
     try { ws?.close(); } catch {}
     browser.kill();

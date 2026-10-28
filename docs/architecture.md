@@ -24,6 +24,7 @@ src/20-editor.js   # 左侧编辑器
 src/30-layout.js   # 面板、缩放、溢出检测、一页适配
 src/40-import.js   # 取色、OCR、文本解析
 src/50-export.js   # PDF / HTML / JSON 导出
+src/60-template.js # 模板 DSL 与模板导入导出
 src/90-main.js     # 事件绑定与启动
 ```
 
@@ -83,6 +84,30 @@ setPath(state, path, value) → saveState() → scheduleRender() → render()
 - `bullets` 支持极简富文本，仅允许 `<strong>`、`<em>`、`<br>`；
 - `version` 用于后续迁移；
 - `photo` 可以是相对路径，也可以是 data URL。
+
+### 3.1 模板 DSL
+
+模板与简历内容完全分离，只描述视觉：
+
+```json
+{
+  "version": 1,
+  "name": "蓝白经典 · 圆角头部",
+  "page": { "size": "A4", "margin": "standard" },
+  "theme": {
+    "accent": "#2563eb",
+    "headerShape": "rounded",
+    "density": 96,
+    "showPhoto": true
+  },
+  "layout": { "template": "classic" }
+}
+```
+
+- JSON Schema：`schema/resume-template.schema.json`
+- 示例：`examples/demo-template.json`
+- 代码：`src/60-template.js`
+- 导入模板只应用样式，不覆盖简历内容；非法值会被归一化到安全默认值。
 
 ## 4. 渲染管线
 
