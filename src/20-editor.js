@@ -168,5 +168,16 @@
     $("#headerShape").value = state.headerShape;
     $("#showPhoto").checked = state.showPhoto;
     $("#pageMargin").value = state.margin;
+    $("#headerHeightRange").value = state.headerHeight;
+    $("#headerHeightValue").textContent = `${state.headerHeight}px`;
+    $("#radiusRange").value = state.radius;
+    $("#radiusValue").textContent = `${state.radius}px`;
+    $("#cardRadiusRange").value = state.cardRadius;
+    $("#cardRadiusValue").textContent = `${state.cardRadius}px`;
+    $("#sectionGapRange").value = state.sectionGap;
+    $("#sectionGapValue").textContent = `${state.sectionGap}px`;
+    $("#lineHeightRange").value = state.lineHeight;
+    $("#lineHeightValue").textContent = Number(state.lineHeight).toFixed(2);
+    $("#workCardStyle").value = state.workCardStyle;
     renderPresets();
   }

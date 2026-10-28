@@ -20,6 +20,7 @@ headshot.svg    # 示例头像
 ```
 src/00-core.js     # 默认数据、常量、状态、工具函数
 src/10-render.js   # 简历预览渲染
+src/15-history.js  # 状态快照、撤销与重做
 src/20-editor.js   # 左侧编辑器
 src/30-layout.js   # 面板、缩放、溢出检测、一页适配
 src/40-import.js   # 取色、OCR、文本解析
@@ -66,6 +67,12 @@ setPath(state, path, value) → saveState() → scheduleRender() → render()
   "showPhoto": true,
   "density": 96,
   "margin": "compact | standard | loose",
+  "headerHeight": 177,
+  "radius": 34,
+  "cardRadius": 15,
+  "sectionGap": 34,
+  "lineHeight": 1.6,
+  "workCardStyle": "dashed | soft | none",
   "photo": "headshot.svg 或 data:image/...",
   "basics": {
     "name": "", "role": "", "location": "", "phone": "", "email": "",
@@ -99,7 +106,13 @@ setPath(state, path, value) → saveState() → scheduleRender() → render()
     "accent": "#2563eb",
     "headerShape": "rounded",
     "density": 96,
-    "showPhoto": true
+    "showPhoto": true,
+    "headerHeight": 177,
+    "radius": 34,
+    "cardRadius": 15,
+    "sectionGap": 34,
+    "lineHeight": 1.6,
+    "workCardStyle": "dashed"
   },
   "layout": { "template": "classic" }
 }
@@ -117,7 +130,7 @@ state
   → headerHtml() / summaryHtml() / listSectionHtml() / skillsHtml() / customHtml()
   → bodyColumns()      根据 template 决定单栏或左右分栏
   → renderPreview()    写入 #resumeContent
-  → CSS 变量注入       --accent / --accent-soft / --section-gap / --line-height
+  → CSS 变量注入       --accent / --header-height / --header-radius / --card-radius / --section-gap / --line-height
 ```
 
 四种版式都复用同一棵 DOM，只通过 `data-template` 与 CSS 选择器改变外观。这样切换版式不会丢失编辑状态。
@@ -149,7 +162,7 @@ autoFit()              在 density 80-112 区间二分/递减，找到最小可�
   → applyImportedStyle() 合并到 state
 ```
 
-当前限制：版式识别只用了宽高比，无法识别卡片、分栏、圆角。v0.3 将改为"视觉模型输出 DSL + 本地渲染"。
+当前限制：本地版式识别无法完整理解复杂卡片与嵌套层级；可选 AI 会输出扩展后的 DSL，再由本地渲染器应用。
 
 ### 6.1 可选 AI 版式解析
 
@@ -173,7 +186,7 @@ autoFit()              在 density 80-112 区间二分/递减，找到最小可�
 
 ### 独立 HTML
 
-`exportHtml()` 克隆预览 DOM，内嵌样式，下载为单独文件。当前会把相对图片路径转换为绝对 URL；v0.2 改为 data URL 内联。
+`exportHtml()` 克隆预览 DOM，内嵌样式与 data URL 图片，下载为换机后仍可显示的单文件。
 
 ### JSON
 
@@ -186,7 +199,7 @@ autoFit()              在 density 80-112 区间二分/递减，找到最小可�
 | `resume-studio-data-v1` | 简历 JSON | 通常 < 100KB，安全 |
 | `resume-studio-photo-v1` | 头像 data URL | 大图可能触发配额错误 |
 
-v0.2 将增加配额检测与压缩提示。
+图片过大时可能触发 localStorage 配额错误，界面会提示先导出 JSON 备份。
 
 ## 9. 已知限制
 
@@ -194,7 +207,7 @@ v0.2 将增加配额检测与压缩提示。
 2. 富文本仅支持少量标签；
 3. 单页固定，无多页分页；
 4. OCR 依赖 CDN，首次使用需联网；
-5. 无撤销/重做，无拖拽排序；
+5. 已有状态级撤销/重做，尚无区域拖拽和图层排序；
 6. 仍无 TypeScript 类型检查，测试以关键纯函数与冒烟流程为主；
 7. 离线 OCR 语言包尚未内置。
 

@@ -24,7 +24,13 @@
         "accent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
         "headerShape": { "enum": ["rounded", "straight", "arch"] },
         "density": { "type": "integer", "minimum": 80, "maximum": 112 },
-        "showPhoto": { "type": "boolean" }
+        "showPhoto": { "type": "boolean" },
+        "headerHeight": { "type": "integer", "minimum": 145, "maximum": 235 },
+        "radius": { "type": "integer", "minimum": 0, "maximum": 58 },
+        "cardRadius": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "sectionGap": { "type": "integer", "minimum": 14, "maximum": 46 },
+        "lineHeight": { "type": "number", "minimum": 1.32, "maximum": 1.82 },
+        "workCardStyle": { "enum": ["dashed", "soft", "none"] }
       },
       "additionalProperties": false
     },

@@ -17,6 +17,20 @@ test("normalizeData clamps density and rejects unknown templates", () => {
   assert.equal(app.normalizeData({ density: 999 }).density, 112);
   assert.equal(app.normalizeData({ density: 10 }).density, 80);
   assert.equal(app.normalizeData({ template: "not-a-template" }).template, "classic");
+  const tokens = app.normalizeData({
+    headerHeight: 999,
+    radius: -4,
+    cardRadius: 99,
+    sectionGap: 1,
+    lineHeight: 9,
+    workCardStyle: "unknown"
+  });
+  assert.equal(tokens.headerHeight, 235);
+  assert.equal(tokens.radius, 0);
+  assert.equal(tokens.cardRadius, 32);
+  assert.equal(tokens.sectionGap, 14);
+  assert.equal(tokens.lineHeight, 1.82);
+  assert.equal(tokens.workCardStyle, "dashed");
 });
 
 test("parseResumeText extracts contact details and sections", () => {
@@ -143,16 +157,39 @@ test("normalizeTemplate fills defaults and clamps invalid values", () => {
   assert.equal(empty.theme.accent, "#2563eb");
   assert.equal(empty.theme.headerShape, "rounded");
   assert.equal(empty.theme.density, 96);
+  assert.equal(empty.theme.headerHeight, 177);
+  assert.equal(empty.theme.radius, 34);
+  assert.equal(empty.theme.cardRadius, 15);
+  assert.equal(empty.theme.sectionGap, 34);
+  assert.equal(empty.theme.lineHeight, 1.6);
+  assert.equal(empty.theme.workCardStyle, "dashed");
   assert.equal(empty.layout.template, "classic");
 
   const clamped = app.normalizeTemplate({
-    theme: { accent: "red", headerShape: "nope", density: 999, showPhoto: false },
+    theme: {
+      accent: "red",
+      headerShape: "nope",
+      density: 999,
+      showPhoto: false,
+      headerHeight: 20,
+      radius: 99,
+      cardRadius: -1,
+      sectionGap: 99,
+      lineHeight: 0.5,
+      workCardStyle: "nope"
+    },
     layout: { template: "nope" }
   });
   assert.equal(clamped.theme.accent, "#2563eb");
   assert.equal(clamped.theme.headerShape, "rounded");
   assert.equal(clamped.theme.density, 112);
   assert.equal(clamped.theme.showPhoto, false);
+  assert.equal(clamped.theme.headerHeight, 145);
+  assert.equal(clamped.theme.radius, 58);
+  assert.equal(clamped.theme.cardRadius, 0);
+  assert.equal(clamped.theme.sectionGap, 46);
+  assert.equal(clamped.theme.lineHeight, 1.32);
+  assert.equal(clamped.theme.workCardStyle, "dashed");
   assert.equal(clamped.layout.template, "classic");
 });
 
@@ -163,7 +200,13 @@ test("templateFromState exports a reusable style without resume content", () => 
     headerShape: "straight",
     density: 88,
     margin: "compact",
-    showPhoto: false
+    showPhoto: false,
+    headerHeight: 196,
+    radius: 24,
+    cardRadius: 10,
+    sectionGap: 28,
+    lineHeight: 1.48,
+    workCardStyle: "soft"
   });
   assert.equal(template.layout.template, "sidebar");
   assert.equal(template.theme.accent, "#0c7b74");
@@ -171,6 +214,12 @@ test("templateFromState exports a reusable style without resume content", () => 
   assert.equal(template.theme.density, 88);
   assert.equal(template.page.margin, "compact");
   assert.equal(template.theme.showPhoto, false);
+  assert.equal(template.theme.headerHeight, 196);
+  assert.equal(template.theme.radius, 24);
+  assert.equal(template.theme.cardRadius, 10);
+  assert.equal(template.theme.sectionGap, 28);
+  assert.equal(template.theme.lineHeight, 1.48);
+  assert.equal(template.theme.workCardStyle, "soft");
   assert.ok(template.name.includes("左侧信息栏"));
   assert.equal(Object.prototype.hasOwnProperty.call(template, "basics"), false);
 });

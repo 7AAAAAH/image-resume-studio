@@ -2,6 +2,7 @@
   const TEMPLATE_VERSION = 1;
   const TEMPLATE_MARGINS = ["compact", "standard", "airy"];
   const HEADER_SHAPES = ["rounded", "straight", "arch"];
+  const WORK_CARD_STYLES = ["dashed", "soft", "none"];
   const TEMPLATE_IDS = PRESETS.map(preset => preset.id);
 
   function normalizeDensity(value) {
@@ -9,6 +10,13 @@
     const number = Number(value);
     if (!Number.isFinite(number)) return 96;
     return Math.min(112, Math.max(80, Math.round(number)));
+  }
+
+  function boundedNumber(value, min, max, fallback, digits = 0) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    const factor = 10 ** digits;
+    return Math.min(max, Math.max(min, Math.round(number * factor) / factor));
   }
 
   function normalizeTemplate(input) {
@@ -29,6 +37,14 @@
     const accentValue = typeof (theme.accent || data.accent) === "string" ? (theme.accent || data.accent) : "";
     const accent = /^#[0-9a-f]{6}$/i.test(accentValue) ? accentValue.toLowerCase() : "#2563eb";
     const showPhoto = (theme.showPhoto ?? data.showPhoto) !== false;
+    const headerHeight = boundedNumber(theme.headerHeight ?? data.headerHeight, 145, 235, 177);
+    const radius = boundedNumber(theme.radius ?? data.radius, 0, 58, 34);
+    const cardRadius = boundedNumber(theme.cardRadius ?? data.cardRadius, 0, 32, 15);
+    const sectionGap = boundedNumber(theme.sectionGap ?? data.sectionGap, 14, 46, 34);
+    const lineHeight = boundedNumber(theme.lineHeight ?? data.lineHeight, 1.32, 1.82, 1.6, 2);
+    const workCardStyle = WORK_CARD_STYLES.includes(theme.workCardStyle)
+      ? theme.workCardStyle
+      : WORK_CARD_STYLES.includes(data.workCardStyle) ? data.workCardStyle : "dashed";
 
     return {
       version: TEMPLATE_VERSION,
@@ -38,7 +54,13 @@
         accent,
         headerShape,
         density: normalizeDensity(theme.density ?? data.density),
-        showPhoto
+        showPhoto,
+        headerHeight,
+        radius,
+        cardRadius,
+        sectionGap,
+        lineHeight,
+        workCardStyle
       },
       layout: { template }
     };
@@ -57,7 +79,13 @@
         accent: source.accent,
         headerShape: source.headerShape,
         density: source.density,
-        showPhoto: source.showPhoto
+        showPhoto: source.showPhoto,
+        headerHeight: source.headerHeight,
+        radius: source.radius,
+        cardRadius: source.cardRadius,
+        sectionGap: source.sectionGap,
+        lineHeight: source.lineHeight,
+        workCardStyle: source.workCardStyle
       },
       layout: { template: source.template }
     });
@@ -71,6 +99,12 @@
     state.margin = template.page.margin;
     state.accent = template.theme.accent;
     state.showPhoto = template.theme.showPhoto;
+    state.headerHeight = template.theme.headerHeight;
+    state.radius = template.theme.radius;
+    state.cardRadius = template.theme.cardRadius;
+    state.sectionGap = template.theme.sectionGap;
+    state.lineHeight = template.theme.lineHeight;
+    state.workCardStyle = template.theme.workCardStyle;
     renderPreview();
     updateStyleControls();
     saveState();

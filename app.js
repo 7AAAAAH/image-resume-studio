@@ -1,4 +1,4 @@
-/*! Image Resume Studio v0.3.0-alpha.2 | MIT | Generated from src/*.js - do not edit app.js directly. */
+/*! Image Resume Studio v0.3.0-alpha.3 | MIT | Generated from src/*.js - do not edit app.js directly. */
 // Fragment 00: bootstrap, default data, constants, state and utilities.
 (() => {
   "use strict";
@@ -13,6 +13,12 @@
     showPhoto: true,
     density: 96,
     margin: "standard",
+    headerHeight: 177,
+    radius: 34,
+    cardRadius: 15,
+    sectionGap: 34,
+    lineHeight: 1.6,
+    workCardStyle: "dashed",
     photo: DEMO_AVATAR,
     basics: {
       name: "林一舟",
@@ -142,6 +148,12 @@
     data.custom = Array.isArray(input?.custom) ? input.custom : [];
     if (!PRESETS.some(p => p.id === data.template)) data.template = "classic";
     data.density = Number.isFinite(+data.density) ? Math.min(112, Math.max(80, +data.density)) : 96;
+    data.headerHeight = Number.isFinite(+data.headerHeight) ? Math.min(235, Math.max(145, Math.round(+data.headerHeight))) : 177;
+    data.radius = Number.isFinite(+data.radius) ? Math.min(58, Math.max(0, Math.round(+data.radius))) : 34;
+    data.cardRadius = Number.isFinite(+data.cardRadius) ? Math.min(32, Math.max(0, Math.round(+data.cardRadius))) : 15;
+    data.sectionGap = Number.isFinite(+data.sectionGap) ? Math.min(46, Math.max(14, Math.round(+data.sectionGap))) : 34;
+    data.lineHeight = Number.isFinite(+data.lineHeight) ? Math.min(1.82, Math.max(1.32, Math.round(+data.lineHeight * 100) / 100)) : 1.6;
+    if (!["dashed", "soft", "none"].includes(data.workCardStyle)) data.workCardStyle = "dashed";
     return data;
   }
 
@@ -163,6 +175,7 @@
       if (state.photo) localStorage.setItem(PHOTO_KEY, state.photo);
       else localStorage.removeItem(PHOTO_KEY);
       if (!quiet) toast("已保存到本地浏览器");
+      if (!history.applying) recordHistory();
     } catch {
       toast("浏览器存储空间不足，请先导出 JSON 备份");
     }
@@ -303,15 +316,22 @@
     const page = $("#resumePage");
     const content = $("#resumeContent");
     page.dataset.template = state.template;
+    page.dataset.workCard = state.workCardStyle;
     page.className = `resume-page header-${state.headerShape} margin-${state.margin}`;
     page.style.setProperty("--accent", state.accent);
     page.style.setProperty("--accent-soft", mixColor(state.accent, "#ffffff", .9));
+    page.style.setProperty("--header-height", `${state.headerHeight}px`);
+    page.style.setProperty("--header-radius", `${state.radius}px`);
+    page.style.setProperty("--card-radius", `${state.cardRadius}px`);
     content.style.setProperty("--accent", state.accent);
     content.style.setProperty("--accent-soft", mixColor(state.accent, "#ffffff", .9));
     const scale = state.density / 84;
+    const densityScale = state.density / 96;
+    const sectionGap = Math.round(state.sectionGap * Math.max(.82, Math.min(1.08, densityScale)));
+    const lineHeight = Math.min(1.88, Math.max(1.28, state.lineHeight + (densityScale - 1) * .12));
     content.style.setProperty("--resume-scale", scale);
-    content.style.setProperty("--section-gap", `${Math.max(20, 34 * scale)}px`);
-    content.style.setProperty("--line-height", `${1.42 + (scale - 1) * .2}`);
+    content.style.setProperty("--section-gap", `${sectionGap}px`);
+    content.style.setProperty("--line-height", lineHeight.toFixed(2));
     page.style.fontSize = `${scale}px`;
     page.style.padding = "0";
     page.style.setProperty("--page-pad", state.margin);
@@ -347,6 +367,98 @@
     const ca = hexToRgb(a), cb = hexToRgb(b);
     const to = v => Math.round(v).toString(16).padStart(2, "0");
     return `#${to(ca.r * (1 - ratio) + cb.r * ratio)}${to(ca.g * (1 - ratio) + cb.g * ratio)}${to(ca.b * (1 - ratio) + cb.b * ratio)}`;
+  }
+
+  // Fragment 15: lightweight undo/redo history for the single state object.
+  const history = {
+    past: [],
+    future: [],
+    current: "",
+    timer: 0,
+    applying: false,
+    max: 40
+  };
+
+  function snapshotState() {
+    return JSON.stringify(state);
+  }
+
+  function resetHistory() {
+    clearTimeout(history.timer);
+    history.past = [];
+    history.future = [];
+    history.current = snapshotState();
+    history.applying = false;
+    updateHistoryControls();
+  }
+
+  function recordHistory() {
+    if (history.applying) return;
+    clearTimeout(history.timer);
+    history.timer = setTimeout(recordHistoryNow, 180);
+  }
+
+  function recordHistoryNow() {
+    clearTimeout(history.timer);
+    history.timer = 0;
+    if (history.applying) return;
+    const snapshot = snapshotState();
+    if (!history.current) {
+      history.current = snapshot;
+      updateHistoryControls();
+      return;
+    }
+    if (snapshot === history.current) return;
+    history.past.push(history.current);
+    if (history.past.length > history.max) history.past.shift();
+    history.current = snapshot;
+    history.future = [];
+    updateHistoryControls();
+  }
+
+  function flushHistory() {
+    if (history.timer) recordHistoryNow();
+  }
+
+  function restoreHistorySnapshot(snapshot) {
+    history.applying = true;
+    clearTimeout(renderTimer);
+    state = normalizeData(JSON.parse(snapshot));
+    renderEditor();
+    renderPreview();
+    updateStyleControls();
+    saveState();
+    history.applying = false;
+    updateHistoryControls();
+  }
+
+  function undo() {
+    flushHistory();
+    if (!history.past.length) return toast("没有可撤销的操作");
+    const current = snapshotState();
+    const previous = history.past.pop();
+    history.future.push(current);
+    history.current = previous;
+    restoreHistorySnapshot(previous);
+    toast("已撤销");
+  }
+
+  function redo() {
+    flushHistory();
+    if (!history.future.length) return toast("没有可重做的操作");
+    const current = snapshotState();
+    const next = history.future.pop();
+    history.past.push(current);
+    history.current = next;
+    restoreHistorySnapshot(next);
+    toast("已重做");
+  }
+
+  function updateHistoryControls() {
+    const undoButton = $("#undoButton");
+    const redoButton = $("#redoButton");
+    if (undoButton) undoButton.disabled = !history.past.length;
+    if (redoButton) redoButton.disabled = !history.future.length;
   }
 
   // Fragment 20: left-hand editor UI.
@@ -519,6 +631,17 @@
     $("#headerShape").value = state.headerShape;
     $("#showPhoto").checked = state.showPhoto;
     $("#pageMargin").value = state.margin;
+    $("#headerHeightRange").value = state.headerHeight;
+    $("#headerHeightValue").textContent = `${state.headerHeight}px`;
+    $("#radiusRange").value = state.radius;
+    $("#radiusValue").textContent = `${state.radius}px`;
+    $("#cardRadiusRange").value = state.cardRadius;
+    $("#cardRadiusValue").textContent = `${state.cardRadius}px`;
+    $("#sectionGapRange").value = state.sectionGap;
+    $("#sectionGapValue").textContent = `${state.sectionGap}px`;
+    $("#lineHeightRange").value = state.lineHeight;
+    $("#lineHeightValue").textContent = Number(state.lineHeight).toFixed(2);
+    $("#workCardStyle").value = state.workCardStyle;
     renderPresets();
   }
 
@@ -1231,6 +1354,7 @@
   const TEMPLATE_VERSION = 1;
   const TEMPLATE_MARGINS = ["compact", "standard", "airy"];
   const HEADER_SHAPES = ["rounded", "straight", "arch"];
+  const WORK_CARD_STYLES = ["dashed", "soft", "none"];
   const TEMPLATE_IDS = PRESETS.map(preset => preset.id);
 
   function normalizeDensity(value) {
@@ -1238,6 +1362,13 @@
     const number = Number(value);
     if (!Number.isFinite(number)) return 96;
     return Math.min(112, Math.max(80, Math.round(number)));
+  }
+
+  function boundedNumber(value, min, max, fallback, digits = 0) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    const factor = 10 ** digits;
+    return Math.min(max, Math.max(min, Math.round(number * factor) / factor));
   }
 
   function normalizeTemplate(input) {
@@ -1258,6 +1389,14 @@
     const accentValue = typeof (theme.accent || data.accent) === "string" ? (theme.accent || data.accent) : "";
     const accent = /^#[0-9a-f]{6}$/i.test(accentValue) ? accentValue.toLowerCase() : "#2563eb";
     const showPhoto = (theme.showPhoto ?? data.showPhoto) !== false;
+    const headerHeight = boundedNumber(theme.headerHeight ?? data.headerHeight, 145, 235, 177);
+    const radius = boundedNumber(theme.radius ?? data.radius, 0, 58, 34);
+    const cardRadius = boundedNumber(theme.cardRadius ?? data.cardRadius, 0, 32, 15);
+    const sectionGap = boundedNumber(theme.sectionGap ?? data.sectionGap, 14, 46, 34);
+    const lineHeight = boundedNumber(theme.lineHeight ?? data.lineHeight, 1.32, 1.82, 1.6, 2);
+    const workCardStyle = WORK_CARD_STYLES.includes(theme.workCardStyle)
+      ? theme.workCardStyle
+      : WORK_CARD_STYLES.includes(data.workCardStyle) ? data.workCardStyle : "dashed";
 
     return {
       version: TEMPLATE_VERSION,
@@ -1267,7 +1406,13 @@
         accent,
         headerShape,
         density: normalizeDensity(theme.density ?? data.density),
-        showPhoto
+        showPhoto,
+        headerHeight,
+        radius,
+        cardRadius,
+        sectionGap,
+        lineHeight,
+        workCardStyle
       },
       layout: { template }
     };
@@ -1286,7 +1431,13 @@
         accent: source.accent,
         headerShape: source.headerShape,
         density: source.density,
-        showPhoto: source.showPhoto
+        showPhoto: source.showPhoto,
+        headerHeight: source.headerHeight,
+        radius: source.radius,
+        cardRadius: source.cardRadius,
+        sectionGap: source.sectionGap,
+        lineHeight: source.lineHeight,
+        workCardStyle: source.workCardStyle
       },
       layout: { template: source.template }
     });
@@ -1300,6 +1451,12 @@
     state.margin = template.page.margin;
     state.accent = template.theme.accent;
     state.showPhoto = template.theme.showPhoto;
+    state.headerHeight = template.theme.headerHeight;
+    state.radius = template.theme.radius;
+    state.cardRadius = template.theme.cardRadius;
+    state.sectionGap = template.theme.sectionGap;
+    state.lineHeight = template.theme.lineHeight;
+    state.workCardStyle = template.theme.workCardStyle;
     renderPreview();
     updateStyleControls();
     saveState();
@@ -1325,6 +1482,7 @@
       toast("模板文件格式不正确");
     }
   }
+
 // Fragment 70: optional BYOK vision model adapter for layout analysis.
   const AI_SETTINGS_KEY = "resume-studio-ai-v1";
   const AI_PROVIDERS = {
@@ -1395,12 +1553,18 @@
       "- layout.template: classic（顶部色块 + 单栏）、sidebar（顶部头部 + 侧栏）、editorial（浅色头部 + 编辑感留白）、minimal（白底 + 细线标题）",
       "- theme.headerShape: rounded（头部卡片右下角圆角）、straight（直角）、arch（拱形）",
       "- theme.density: 80-112 的整数，版面越紧凑数值越小",
+      "- theme.headerHeight: 头部视觉高度，145-235 的整数",
+      "- theme.radius: 头部大圆角，0-58 的整数",
+      "- theme.cardRadius: 简历卡片圆角，0-32 的整数",
+      "- theme.sectionGap: 栏目标题之间的间距，14-46 的整数",
+      "- theme.lineHeight: 正文行高，1.32-1.82",
+      "- theme.workCardStyle: dashed（虚线卡片）、soft（柔光卡片）、none（无卡片）",
       "- page.margin: compact / standard / airy",
       "- theme.showPhoto: 是否有证件照",
       "- theme.accent: 主色的十六进制值",
       "",
       "只输出严格 JSON，不要 Markdown，不要解释：",
-      '{"version":1,"name":"简短模板名","page":{"size":"A4","margin":"standard"},"theme":{"accent":"#2563eb","headerShape":"rounded","density":96,"showPhoto":true},"layout":{"template":"classic"}}'
+      '{"version":1,"name":"简短模板名","page":{"size":"A4","margin":"standard"},"theme":{"accent":"#2563eb","headerShape":"rounded","density":96,"showPhoto":true,"headerHeight":177,"radius":34,"cardRadius":15,"sectionGap":34,"lineHeight":1.6,"workCardStyle":"dashed"},"layout":{"template":"classic"}}'
     ].join("\n");
   }
 
@@ -1569,6 +1733,15 @@
 
   // Fragment 90: event binding and app startup.
 
+  function bindStyleRange(inputId, key, outputId, format) {
+    $(inputId).addEventListener("input", e => {
+      state[key] = Number(e.target.value);
+      $(outputId).textContent = format(state[key]);
+      renderPreview();
+      saveState();
+    });
+  }
+
   function bindEvents() {
     $$(".step").forEach(btn => btn.addEventListener("click", () => switchPanel(btn.dataset.step)));
     $("#collapseAll").addEventListener("click", () => {
@@ -1608,9 +1781,26 @@
     $("#accentColor").addEventListener("input", e => { state.accent = e.target.value; renderPreview(); saveState(); });
     $("#densityRange").addEventListener("input", e => { state.density = +e.target.value; $("#densityValue").textContent = state.density < 90 ? "紧凑" : state.density > 102 ? "舒展" : "舒适"; renderPreview(); saveState(); });
     $("#headerShape").addEventListener("change", e => { state.headerShape = e.target.value; renderPreview(); saveState(); });
+    bindStyleRange("#headerHeightRange", "headerHeight", "#headerHeightValue", value => `${value}px`);
+    bindStyleRange("#radiusRange", "radius", "#radiusValue", value => `${value}px`);
+    bindStyleRange("#cardRadiusRange", "cardRadius", "#cardRadiusValue", value => `${value}px`);
+    bindStyleRange("#sectionGapRange", "sectionGap", "#sectionGapValue", value => `${value}px`);
+    bindStyleRange("#lineHeightRange", "lineHeight", "#lineHeightValue", value => Number(value).toFixed(2));
+    $("#workCardStyle").addEventListener("change", e => { state.workCardStyle = e.target.value; renderPreview(); saveState(); });
+    $("#resetTokensButton").addEventListener("click", () => {
+      ["headerHeight", "radius", "cardRadius", "sectionGap", "lineHeight", "workCardStyle"].forEach(key => {
+        state[key] = DEFAULT_DATA[key];
+      });
+      renderPreview();
+      updateStyleControls();
+      saveState();
+      toast("设计 Token 已重置");
+    });
     $("#showPhoto").addEventListener("change", e => { state.showPhoto = e.target.checked; renderPreview(); saveState(); });
     $("#pageMargin").addEventListener("change", e => { state.margin = e.target.value; renderPreview(); saveState(); });
     $("#autoFitButton").addEventListener("click", autoFit);
+    $("#undoButton").addEventListener("click", undo);
+    $("#redoButton").addEventListener("click", redo);
     $("#zoomOut").addEventListener("click", () => setZoom(ui.zoom - .1));
     $("#zoomIn").addEventListener("click", () => setZoom(ui.zoom + .1));
     $("#fitWidth").addEventListener("click", fitWidth);
@@ -1683,6 +1873,15 @@
         $("#importModal").hidden = true; $("#ocrModal").hidden = true; $("#aiModal").hidden = true; $("#moreMenu").hidden = true;
         $("#paperStage").classList.remove("is-fullscreen"); updateZoom();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveState(false); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") { e.preventDefault(); exportPdf(); }
     });
@@ -1698,6 +1897,7 @@
     renderPresets();
     updateStyleControls();
     bindEvents();
+    resetHistory();
     if (window.innerWidth < 760) {
       ui.zoom = .46;
       updateZoom();

@@ -135,6 +135,54 @@ async function main() {
     assert(aiSettings.noKey.modalReopened, "missing API key should reopen settings");
     assert(aiSettings.noKey.fetchCalls === 0, "missing API key must not make a network call");
 
+    const tokenRoundTrip = await evaluate(send, `(async () => {
+      const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      const setRange = (selector, value) => {
+        const input = document.querySelector(selector);
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      setRange('#headerHeightRange', 210);
+      setRange('#cardRadiusRange', 24);
+      const card = document.querySelector('#workCardStyle');
+      card.value = 'soft';
+      card.dispatchEvent(new Event('change', { bubbles: true }));
+      await wait(260);
+      const changed = {
+        headerHeight: document.querySelector('#resumePage').style.getPropertyValue('--header-height').trim(),
+        cardRadius: document.querySelector('#resumePage').style.getPropertyValue('--card-radius').trim(),
+        workCard: document.querySelector('#resumePage').dataset.workCard,
+        undoEnabled: !document.querySelector('#undoButton').disabled
+      };
+      document.querySelector('#undoButton').click();
+      await wait(180);
+      const undone = {
+        headerHeight: document.querySelector('#headerHeightRange').value,
+        cardRadius: document.querySelector('#cardRadiusRange').value,
+        workCard: document.querySelector('#workCardStyle').value,
+        redoEnabled: !document.querySelector('#redoButton').disabled
+      };
+      document.querySelector('#redoButton').click();
+      await wait(180);
+      const redone = {
+        headerHeight: document.querySelector('#headerHeightRange').value,
+        cardRadius: document.querySelector('#cardRadiusRange').value,
+        workCard: document.querySelector('#workCardStyle').value
+      };
+      return { changed, undone, redone };
+    })()`);
+    assert(tokenRoundTrip.changed.headerHeight === "210px", "header-height token was not applied");
+    assert(tokenRoundTrip.changed.cardRadius === "24px", "card-radius token was not applied");
+    assert(tokenRoundTrip.changed.workCard === "soft", "work-card style was not applied");
+    assert(tokenRoundTrip.changed.undoEnabled, "undo should be enabled after a change");
+    assert(tokenRoundTrip.undone.headerHeight === "177", "undo did not restore header height");
+    assert(tokenRoundTrip.undone.cardRadius === "15", "undo did not restore card radius");
+    assert(tokenRoundTrip.undone.workCard === "dashed", "undo did not restore work-card style");
+    assert(tokenRoundTrip.undone.redoEnabled, "redo should be enabled after undo");
+    assert(tokenRoundTrip.redone.headerHeight === "210", "redo did not restore header height");
+    assert(tokenRoundTrip.redone.cardRadius === "24", "redo did not restore card radius");
+    assert(tokenRoundTrip.redone.workCard === "soft", "redo did not restore work-card style");
+
     const layout = await evaluate(send, `(async () => {
       async function make(kind) {
         const canvas = document.createElement("canvas");
@@ -218,13 +266,26 @@ async function main() {
     assert(template.version === 1, "template version missing");
     assert(template.layout.template, "template layout missing");
     assert(/^#[0-9a-f]{6}$/i.test(template.theme.accent), "template accent invalid");
+    assert(template.theme.headerHeight === 210, "design token missing from exported template");
+    assert(template.theme.workCardStyle === "soft", "card style missing from exported template");
 
     await evaluate(send, `(() => {
       const tpl = {
         version: 1,
         name: "E2E 模板",
         page: { size: "A4", margin: "compact" },
-        theme: { accent: "#0c7b74", headerShape: "straight", density: 88, showPhoto: false },
+        theme: {
+          accent: "#0c7b74",
+          headerShape: "straight",
+          density: 88,
+          showPhoto: false,
+          headerHeight: 205,
+          radius: 20,
+          cardRadius: 8,
+          sectionGap: 26,
+          lineHeight: 1.5,
+          workCardStyle: "soft"
+        },
         layout: { template: "sidebar" }
       };
       const input = document.querySelector('#templateInput');
@@ -241,7 +302,13 @@ async function main() {
       density: document.querySelector('#densityRange').value,
       margin: document.querySelector('#pageMargin').value,
       showPhoto: document.querySelector('#showPhoto').checked,
-      template: document.querySelector('#resumePage').dataset.template
+      template: document.querySelector('#resumePage').dataset.template,
+      headerHeight: document.querySelector('#headerHeightRange').value,
+      radius: document.querySelector('#radiusRange').value,
+      cardRadius: document.querySelector('#cardRadiusRange').value,
+      sectionGap: document.querySelector('#sectionGapRange').value,
+      lineHeight: document.querySelector('#lineHeightRange').value,
+      workCard: document.querySelector('#resumePage').dataset.workCard
     }))()`);
     assert(applied.accent === "#0c7b74", "template accent was not applied");
     assert(applied.shape === "straight", "template header shape was not applied");
@@ -249,6 +316,12 @@ async function main() {
     assert(applied.margin === "compact", "template margin was not applied");
     assert(applied.showPhoto === false, "template photo setting was not applied");
     assert(applied.template === "sidebar", "template layout was not applied");
+    assert(applied.headerHeight === "205", "template header height was not applied");
+    assert(applied.radius === "20", "template header radius was not applied");
+    assert(applied.cardRadius === "8", "template card radius was not applied");
+    assert(applied.sectionGap === "26", "template section gap was not applied");
+    assert(applied.lineHeight === "1.5", "template line height was not applied");
+    assert(applied.workCard === "soft", "template work-card style was not applied");
 
     const errors = events.filter((event) =>
       event.method === "Runtime.exceptionThrown" ||
@@ -258,7 +331,7 @@ async function main() {
     assert(errors.length === 0, `console errors: ${errors.length}`);
 
     console.log("E2E OK");
-    console.log(JSON.stringify({ ...state, aiSettings, layout, template, applied, exportedBytes: Buffer.byteLength(html) }, null, 2));
+    console.log(JSON.stringify({ ...state, aiSettings, tokenRoundTrip, layout, template, applied, exportedBytes: Buffer.byteLength(html) }, null, 2));
   } finally {
     try { ws?.close(); } catch {}
     browser.kill();

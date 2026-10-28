@@ -68,12 +68,18 @@
       "- layout.template: classic（顶部色块 + 单栏）、sidebar（顶部头部 + 侧栏）、editorial（浅色头部 + 编辑感留白）、minimal（白底 + 细线标题）",
       "- theme.headerShape: rounded（头部卡片右下角圆角）、straight（直角）、arch（拱形）",
       "- theme.density: 80-112 的整数，版面越紧凑数值越小",
+      "- theme.headerHeight: 头部视觉高度，145-235 的整数",
+      "- theme.radius: 头部大圆角，0-58 的整数",
+      "- theme.cardRadius: 简历卡片圆角，0-32 的整数",
+      "- theme.sectionGap: 栏目标题之间的间距，14-46 的整数",
+      "- theme.lineHeight: 正文行高，1.32-1.82",
+      "- theme.workCardStyle: dashed（虚线卡片）、soft（柔光卡片）、none（无卡片）",
       "- page.margin: compact / standard / airy",
       "- theme.showPhoto: 是否有证件照",
       "- theme.accent: 主色的十六进制值",
       "",
       "只输出严格 JSON，不要 Markdown，不要解释：",
-      '{"version":1,"name":"简短模板名","page":{"size":"A4","margin":"standard"},"theme":{"accent":"#2563eb","headerShape":"rounded","density":96,"showPhoto":true},"layout":{"template":"classic"}}'
+      '{"version":1,"name":"简短模板名","page":{"size":"A4","margin":"standard"},"theme":{"accent":"#2563eb","headerShape":"rounded","density":96,"showPhoto":true,"headerHeight":177,"radius":34,"cardRadius":15,"sectionGap":34,"lineHeight":1.6,"workCardStyle":"dashed"},"layout":{"template":"classic"}}'
     ].join("\n");
   }
 

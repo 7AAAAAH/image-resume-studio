@@ -22,6 +22,10 @@
       </div>
       <div class="topbar-actions">
         <div class="save-state" id="saveState"><span class="save-dot"></span>本地自动保存</div>
+        <div class="history-controls" aria-label="编辑历史">
+          <button type="button" class="history-button" id="undoButton" title="撤销 Ctrl+Z" aria-label="撤销" disabled>↶</button>
+          <button type="button" class="history-button" id="redoButton" title="重做 Ctrl+Y" aria-label="重做" disabled>↷</button>
+        </div>
         <button class="button button-quiet" id="importButton" type="button">
           <span class="button-icon">＋</span> 导入简历图片
         </button>
@@ -96,6 +100,43 @@
               <option value="straight">利落直角</option>
               <option value="arch">侧边弧形</option>
             </select>
+          </div>
+          <div class="token-panel">
+            <div class="token-panel-head">
+              <div>
+                <strong>设计 Token</strong>
+                <span>精确控制卡片与版心</span>
+              </div>
+              <button type="button" class="text-button" id="resetTokensButton">重置</button>
+            </div>
+            <label class="token-control" for="headerHeightRange">
+              <span>头部高度</span><output id="headerHeightValue">177px</output>
+              <input type="range" id="headerHeightRange" min="145" max="235" step="1" value="177">
+            </label>
+            <label class="token-control" for="radiusRange">
+              <span>头部圆角</span><output id="radiusValue">34px</output>
+              <input type="range" id="radiusRange" min="0" max="58" step="1" value="34">
+            </label>
+            <label class="token-control" for="cardRadiusRange">
+              <span>卡片圆角</span><output id="cardRadiusValue">15px</output>
+              <input type="range" id="cardRadiusRange" min="0" max="32" step="1" value="15">
+            </label>
+            <label class="token-control" for="sectionGapRange">
+              <span>区块间距</span><output id="sectionGapValue">34px</output>
+              <input type="range" id="sectionGapRange" min="14" max="46" step="1" value="34">
+            </label>
+            <label class="token-control" for="lineHeightRange">
+              <span>正文行高</span><output id="lineHeightValue">1.60</output>
+              <input type="range" id="lineHeightRange" min="1.32" max="1.82" step="0.02" value="1.6">
+            </label>
+            <label class="token-select">
+              <span>工作经历卡片</span>
+              <select id="workCardStyle">
+                <option value="dashed">虚线卡片</option>
+                <option value="soft">柔光卡片</option>
+                <option value="none">无卡片</option>
+              </select>
+            </label>
           </div>
           <label class="switch-row">
             <span>显示头像</span>

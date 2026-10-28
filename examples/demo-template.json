@@ -6,7 +6,13 @@
     "accent": "#2563eb",
     "headerShape": "rounded",
     "density": 96,
-    "showPhoto": true
+    "showPhoto": true,
+    "headerHeight": 177,
+    "radius": 34,
+    "cardRadius": 15,
+    "sectionGap": 34,
+    "lineHeight": 1.6,
+    "workCardStyle": "dashed"
   },
   "layout": { "template": "classic" }
 }

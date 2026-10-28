@@ -1,5 +1,14 @@
   // Fragment 90: event binding and app startup.
 
+  function bindStyleRange(inputId, key, outputId, format) {
+    $(inputId).addEventListener("input", e => {
+      state[key] = Number(e.target.value);
+      $(outputId).textContent = format(state[key]);
+      renderPreview();
+      saveState();
+    });
+  }
+
   function bindEvents() {
     $$(".step").forEach(btn => btn.addEventListener("click", () => switchPanel(btn.dataset.step)));
     $("#collapseAll").addEventListener("click", () => {
@@ -39,9 +48,26 @@
     $("#accentColor").addEventListener("input", e => { state.accent = e.target.value; renderPreview(); saveState(); });
     $("#densityRange").addEventListener("input", e => { state.density = +e.target.value; $("#densityValue").textContent = state.density < 90 ? "紧凑" : state.density > 102 ? "舒展" : "舒适"; renderPreview(); saveState(); });
     $("#headerShape").addEventListener("change", e => { state.headerShape = e.target.value; renderPreview(); saveState(); });
+    bindStyleRange("#headerHeightRange", "headerHeight", "#headerHeightValue", value => `${value}px`);
+    bindStyleRange("#radiusRange", "radius", "#radiusValue", value => `${value}px`);
+    bindStyleRange("#cardRadiusRange", "cardRadius", "#cardRadiusValue", value => `${value}px`);
+    bindStyleRange("#sectionGapRange", "sectionGap", "#sectionGapValue", value => `${value}px`);
+    bindStyleRange("#lineHeightRange", "lineHeight", "#lineHeightValue", value => Number(value).toFixed(2));
+    $("#workCardStyle").addEventListener("change", e => { state.workCardStyle = e.target.value; renderPreview(); saveState(); });
+    $("#resetTokensButton").addEventListener("click", () => {
+      ["headerHeight", "radius", "cardRadius", "sectionGap", "lineHeight", "workCardStyle"].forEach(key => {
+        state[key] = DEFAULT_DATA[key];
+      });
+      renderPreview();
+      updateStyleControls();
+      saveState();
+      toast("设计 Token 已重置");
+    });
     $("#showPhoto").addEventListener("change", e => { state.showPhoto = e.target.checked; renderPreview(); saveState(); });
     $("#pageMargin").addEventListener("change", e => { state.margin = e.target.value; renderPreview(); saveState(); });
     $("#autoFitButton").addEventListener("click", autoFit);
+    $("#undoButton").addEventListener("click", undo);
+    $("#redoButton").addEventListener("click", redo);
     $("#zoomOut").addEventListener("click", () => setZoom(ui.zoom - .1));
     $("#zoomIn").addEventListener("click", () => setZoom(ui.zoom + .1));
     $("#fitWidth").addEventListener("click", fitWidth);
@@ -114,6 +140,15 @@
         $("#importModal").hidden = true; $("#ocrModal").hidden = true; $("#aiModal").hidden = true; $("#moreMenu").hidden = true;
         $("#paperStage").classList.remove("is-fullscreen"); updateZoom();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveState(false); }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") { e.preventDefault(); exportPdf(); }
     });
@@ -129,6 +164,7 @@
     renderPresets();
     updateStyleControls();
     bindEvents();
+    resetHistory();
     if (window.innerWidth < 760) {
       ui.zoom = .46;
       updateZoom();

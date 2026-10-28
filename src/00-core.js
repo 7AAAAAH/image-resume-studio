@@ -12,6 +12,12 @@
     showPhoto: true,
     density: 96,
     margin: "standard",
+    headerHeight: 177,
+    radius: 34,
+    cardRadius: 15,
+    sectionGap: 34,
+    lineHeight: 1.6,
+    workCardStyle: "dashed",
     photo: DEMO_AVATAR,
     basics: {
       name: "林一舟",
@@ -141,6 +147,12 @@
     data.custom = Array.isArray(input?.custom) ? input.custom : [];
     if (!PRESETS.some(p => p.id === data.template)) data.template = "classic";
     data.density = Number.isFinite(+data.density) ? Math.min(112, Math.max(80, +data.density)) : 96;
+    data.headerHeight = Number.isFinite(+data.headerHeight) ? Math.min(235, Math.max(145, Math.round(+data.headerHeight))) : 177;
+    data.radius = Number.isFinite(+data.radius) ? Math.min(58, Math.max(0, Math.round(+data.radius))) : 34;
+    data.cardRadius = Number.isFinite(+data.cardRadius) ? Math.min(32, Math.max(0, Math.round(+data.cardRadius))) : 15;
+    data.sectionGap = Number.isFinite(+data.sectionGap) ? Math.min(46, Math.max(14, Math.round(+data.sectionGap))) : 34;
+    data.lineHeight = Number.isFinite(+data.lineHeight) ? Math.min(1.82, Math.max(1.32, Math.round(+data.lineHeight * 100) / 100)) : 1.6;
+    if (!["dashed", "soft", "none"].includes(data.workCardStyle)) data.workCardStyle = "dashed";
     return data;
   }
 
@@ -162,6 +174,7 @@
       if (state.photo) localStorage.setItem(PHOTO_KEY, state.photo);
       else localStorage.removeItem(PHOTO_KEY);
       if (!quiet) toast("已保存到本地浏览器");
+      if (!history.applying) recordHistory();
     } catch {
       toast("浏览器存储空间不足，请先导出 JSON 备份");
     }
