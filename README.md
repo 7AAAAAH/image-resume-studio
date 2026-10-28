@@ -6,8 +6,9 @@
 [![No Build](https://img.shields.io/badge/build-none-brightgreen.svg)](#技术实现)
 [![Local First](https://img.shields.io/badge/privacy-local--first-2563eb.svg)](#隐私与数据)
 
-在线试用：<https://7aaaaah.github.io/image-resume-studio/>  
-示例成品：[demo-resume.pdf](screenshots/demo-resume.pdf)
+- 免登录在线预览（有效期至 2026-11-27）：<https://single-wood-8n2d7.ship.place/>
+- GitHub Pages 备用地址：<https://7aaaaah.github.io/image-resume-studio/>
+- 示例成品：[demo-resume.pdf](screenshots/demo-resume.pdf)
 
 ![工作台截图](screenshots/studio.png)
 

@@ -9,7 +9,8 @@ const os = require("node:os");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..", "..");
-const indexUrl = "file:///" + path.join(root, "index.html").replace(/\\/g, "/") + "?test=1";
+const indexUrl = process.env.E2E_URL ||
+  "file:///" + path.join(root, "index.html").replace(/\\/g, "/") + "?test=1";
 
 function findBrowser() {
   const candidates = [

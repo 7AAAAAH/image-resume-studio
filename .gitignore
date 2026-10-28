@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 build/
+.netlify/
 
 # Editor / OS
 .DS_Store
