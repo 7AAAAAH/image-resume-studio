@@ -114,7 +114,8 @@ autoFit()              在 density 80-112 区间二分/递减，找到最小可�
 ```
 选择图片
   → imagePalette()   Canvas 缩小到 320px，按 20 级色桶统计，选高饱和、中亮度主色
-  → analyzeImage()   读取宽高比，映射模板与头部轮廓
+  → analyzeLayout()  Canvas 降采样，扫描头部行、右下圆角缺口、左右侧栏底色
+  → classifyLayoutSignals() 映射模板 / 头部轮廓 / 密度 / 置信度
   → recognizeWithOcr() Tesseract.js（CDN）识别中英文
   → cleanOcrText()   去噪、合并断行
   → parseResumeText() 按栏目关键词切段

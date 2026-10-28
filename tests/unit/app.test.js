@@ -87,3 +87,51 @@ test("getPath and setPath work with nested paths", () => {
   app.setPath(obj, "summary.lead", "hello");
   assert.equal(obj.summary.lead, "hello");
 });
+
+test("classifyLayoutSignals detects rounded hero headers", () => {
+  const result = app.classifyLayoutSignals({
+    aspect: 1.414,
+    headerRatio: 0.24,
+    cornerGap: 0.18,
+    leftTint: 0,
+    rightTint: 0
+  });
+  assert.equal(result.template, "classic");
+  assert.equal(result.shape, "rounded");
+  assert.equal(result.density, 96);
+  assert.ok(result.confidence >= 0.6);
+});
+
+test("classifyLayoutSignals detects straight and minimal layouts", () => {
+  const straight = app.classifyLayoutSignals({
+    aspect: 1.414,
+    headerRatio: 0.3,
+    cornerGap: 0,
+    leftTint: 0,
+    rightTint: 0
+  });
+  assert.equal(straight.shape, "straight");
+  assert.equal(straight.density, 88);
+
+  const minimal = app.classifyLayoutSignals({
+    aspect: 1.414,
+    headerRatio: 0.06,
+    cornerGap: 0,
+    leftTint: 0,
+    rightTint: 0
+  });
+  assert.equal(minimal.template, "minimal");
+  assert.equal(minimal.density, 100);
+});
+
+test("classifyLayoutSignals detects a tinted sidebar column", () => {
+  const result = app.classifyLayoutSignals({
+    aspect: 1.414,
+    headerRatio: 0.2,
+    cornerGap: 0,
+    leftTint: 0.03,
+    rightTint: 0.34
+  });
+  assert.equal(result.template, "sidebar");
+  assert.ok(result.confidence <= 0.9);
+});

@@ -24,7 +24,8 @@ function loadApp() {
     escapeHtml,
     safeRich,
     getPath,
-    setPath
+    setPath,
+    classifyLayoutSignals
   };
 })();`;
   const testCode = code.replace(/\n\s*init\(\);\s*\n\}\)\(\);\s*$/, exportBlock);

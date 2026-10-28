@@ -9,7 +9,7 @@ const os = require("node:os");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..", "..");
-const indexUrl = "file:///" + path.join(root, "index.html").replace(/\\/g, "/");
+const indexUrl = "file:///" + path.join(root, "index.html").replace(/\\/g, "/") + "?test=1";
 
 function findBrowser() {
   const candidates = [
@@ -87,6 +87,65 @@ async function main() {
     assert(state.avatar.startsWith("data:image/svg+xml;base64,"), "demo avatar should be embedded");
     assert(state.usage.length > 0, "page usage indicator missing");
 
+    const layout = await evaluate(send, `(async () => {
+      async function make(kind) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 600;
+        canvas.height = 850;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, 600, 850);
+        const headerHeight = kind === "minimal" ? 56 : kind === "straight" ? 260 : 220;
+        ctx.fillStyle = "#2563eb";
+        if (kind === "rounded") {
+          const radius = 110;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(600, 0);
+          ctx.lineTo(600, headerHeight - radius);
+          ctx.quadraticCurveTo(600, headerHeight, 600 - radius, headerHeight);
+          ctx.lineTo(0, headerHeight);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(0, 0, 600, headerHeight);
+        }
+        ctx.fillStyle = "#333333";
+        for (let y = headerHeight + 40; y < 820; y += 26) {
+          ctx.fillRect(40, y, 250 + (y % 140), 7);
+        }
+        if (kind === "sidebar") {
+          ctx.fillStyle = "#eef3fb";
+          ctx.fillRect(450, headerHeight + 20, 150, 780 - headerHeight);
+        }
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        return new File([blob], kind + ".png", { type: "image/png" });
+      }
+      const result = {};
+      for (const kind of ["rounded", "straight", "minimal", "sidebar"]) {
+        const file = await make(kind);
+        const analysis = await window.__RS_TEST__.analyzeImage(file);
+        result[kind] = {
+          template: analysis.features.template,
+          shape: analysis.features.shape,
+          density: analysis.features.density,
+          confidence: analysis.features.confidence,
+          signals: analysis.features.signals
+        };
+      }
+      return result;
+    })()`);
+
+    console.log("LAYOUT_DEBUG " + JSON.stringify(layout));
+    assert(layout.rounded.shape === "rounded", "rounded header was not detected");
+    assert(layout.rounded.template === "classic", "rounded header should use classic layout");
+    assert(layout.straight.shape === "straight", "straight header was not detected");
+    assert(layout.minimal.template === "minimal", "minimal layout was not detected");
+    assert(layout.sidebar.template === "sidebar", "sidebar layout was not detected");
+    for (const [kind, item] of Object.entries(layout)) {
+      assert(item.confidence > 0.25, `layout confidence too low for ${kind}`);
+    }
+
     await evaluate(send, `(() => {
       document.querySelector('#moreButton').click();
       const button = document.querySelector('[data-action="export-html"]');
@@ -109,7 +168,7 @@ async function main() {
     assert(errors.length === 0, `console errors: ${errors.length}`);
 
     console.log("E2E OK");
-    console.log(JSON.stringify({ ...state, exportedBytes: Buffer.byteLength(html) }, null, 2));
+    console.log(JSON.stringify({ ...state, layout, exportedBytes: Buffer.byteLength(html) }, null, 2));
   } finally {
     try { ws?.close(); } catch {}
     browser.kill();

@@ -62,19 +62,136 @@
     }
   }
 
+  const LAYOUT_TEMPLATE_NAMES = {
+    classic: "蓝白经典",
+    sidebar: "左侧信息栏",
+    editorial: "编辑感留白",
+    minimal: "极简线条"
+  };
+
+  function classifyLayoutSignals(signals) {
+    const aspect = signals.aspect || 1.414;
+    const headerRatio = signals.headerRatio || 0;
+    const cornerGap = Number.isFinite(signals.cornerGap) ? signals.cornerGap : 0;
+    const leftTint = signals.leftTint || 0;
+    const rightTint = signals.rightTint || 0;
+    const sideSignal = Math.max(leftTint, rightTint);
+
+    let template = "classic";
+    if (headerRatio < 0.1) template = "minimal";
+    else if (sideSignal > 0.18 && Math.abs(leftTint - rightTint) > 0.12) template = "sidebar";
+
+    const shape = cornerGap > 0.025 ? "rounded" : "straight";
+    const density = headerRatio > 0.28 ? 88 : headerRatio < 0.15 ? 100 : 96;
+    const confidence = Math.max(0.25, Math.min(0.9,
+      0.35 +
+      (headerRatio > 0.08 ? 0.2 : 0) +
+      (cornerGap > 0.08 || cornerGap < 0.005 ? 0.15 : 0) +
+      (sideSignal > 0.18 ? 0.15 : 0) +
+      (aspect > 1.2 && aspect < 1.7 ? 0.1 : 0)
+    ));
+
+    return { aspect, template, shape, density, confidence };
+  }
+
+  async function analyzeLayout(img, accent) {
+    const max = 480;
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const width = Math.max(1, Math.round(img.width * scale));
+    const height = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, width, height);
+    const { data } = ctx.getImageData(0, 0, width, height);
+    const accentRgb = hexToRgb(accent);
+
+    const isAccent = (index) => {
+      const r = data[index], g = data[index + 1], b = data[index + 2], a = data[index + 3];
+      if (a < 160) return false;
+      return Math.hypot(r - accentRgb.r, g - accentRgb.g, b - accentRgb.b) < 70;
+    };
+
+    // Locate the coloured header band by scanning rows from the top.
+    let headerEnd = 0;
+    let run = 0;
+    const scanLimit = Math.floor(height * 0.45);
+    for (let y = 0; y < scanLimit; y += 1) {
+      let count = 0;
+      for (let x = 0; x < width; x += 1) {
+        if (isAccent((y * width + x) * 4)) count += 1;
+      }
+      if (count / width > 0.12) {
+        run += 1;
+        headerEnd = y;
+      } else if (run > 0 && y - headerEnd > 3) {
+        break;
+      }
+    }
+    const headerRatio = headerEnd / height;
+
+    // A rounded bottom-right corner leaves mostly background pixels in the sample.
+    let cornerInk = 1;
+    let cornerGap = 0;
+    if (headerEnd > 6) {
+      const size = Math.max(4, Math.min(Math.floor(width * 0.12), Math.floor(headerEnd * 0.5)));
+      let inked = 0;
+      let total = 0;
+      for (let y = Math.max(0, headerEnd - size); y < headerEnd; y += 1) {
+        for (let x = Math.max(0, width - size); x < width; x += 1) {
+          total += 1;
+          if (isAccent((y * width + x) * 4)) inked += 1;
+        }
+      }
+      cornerInk = total ? inked / total : 1;
+      const row = Math.max(0, headerEnd - 1);
+      let x = width - 1;
+      while (x >= 0 && !isAccent((row * width + x) * 4)) {
+        cornerGap += 1;
+        x -= 1;
+      }
+      cornerGap /= width;
+    }
+
+    // Detect a tinted side column in the body, which suggests a sidebar layout.
+    const bodyStart = Math.min(height - 1, Math.max(headerEnd + 4, Math.floor(height * 0.12)));
+    const bodyEnd = Math.floor(height * 0.92);
+    const bandWidth = Math.max(4, Math.floor(width * 0.18));
+    const tintRatio = (x0, x1) => {
+      let tinted = 0;
+      let total = 0;
+      for (let y = bodyStart; y < bodyEnd; y += 2) {
+        for (let x = x0; x < x1; x += 2) {
+          const index = (y * width + x) * 4;
+          const r = data[index], g = data[index + 1], b = data[index + 2];
+          const light = (r + g + b) / 3;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          total += 1;
+          if (light > 170 && light < 250 && spread > 6) tinted += 1;
+        }
+      }
+      return total ? tinted / total : 0;
+    };
+
+    const signals = {
+      aspect: img.height / img.width,
+      headerRatio,
+      cornerInk,
+      cornerGap,
+      leftTint: tintRatio(0, bandWidth),
+      rightTint: tintRatio(width - bandWidth, width)
+    };
+    return { ...classifyLayoutSignals(signals), signals };
+  }
+
   async function analyzeImage(file) {
     const palette = await imagePalette(file);
     const dataUrl = await readFileAsDataURL(file);
     const img = await new Promise((resolve, reject) => {
       const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = dataUrl;
     });
-    const ratio = img.height / img.width;
-    const features = {
-      ratio,
-      template: ratio > 1.24 ? "sidebar" : ratio < 1.15 ? "minimal" : "classic",
-      shape: ratio > 1.24 ? "straight" : "rounded",
-      density: ratio > 1.45 ? 88 : 96
-    };
+    const features = await analyzeLayout(img, palette.accent);
     return { palette, dataUrl, features };
   }
 
@@ -149,7 +266,9 @@
     try {
       const result = await analyzeImage(file);
       importContext = { image: result.dataUrl, palette: result.palette, features: result.features, text: "" };
-      $("#importStatus").textContent = "版式分析完成";
+      const detected = result.features;
+      const shapeLabel = detected.shape === "rounded" ? "圆角头部" : "直角头部";
+      $("#importStatus").textContent = `版式分析完成 · ${LAYOUT_TEMPLATE_NAMES[detected.template]} · ${shapeLabel} · ${Math.round(detected.confidence * 100)}%`;
       $("#importModal").hidden = true;
       if ($("#mergeToggle").checked) {
         $("#ocrModal").hidden = false;

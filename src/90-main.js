@@ -118,6 +118,9 @@
     } else {
       setTimeout(fitWidth, 80);
     }
+    if (new URLSearchParams(location.search).has("test")) {
+      window.__RS_TEST__ = { analyzeLayout, analyzeImage, classifyLayoutSignals, parseResumeText, normalizeData };
+    }
   }
 
   init();
