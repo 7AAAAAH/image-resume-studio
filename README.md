@@ -59,6 +59,17 @@ cd image-resume-studio
 python -m http.server 8080
 ```
 
+### 修改源码
+
+`app.js` 是构建产物。请编辑 `src/*.js`，然后运行：
+
+```bash
+npm run build
+npm test
+```
+
+构建脚本只是按固定顺序拼接源码片段，不引入任何运行时依赖，因此发布版仍然可以直接双击打开。Node.js 22+ 仅用于构建和测试。
+
 ### 导出 PDF
 
 在浏览器打印窗口中选择：
@@ -88,11 +99,13 @@ python -m http.server 8080
 
 ## 技术实现
 
-- 原生 HTML / CSS / JavaScript，无框架、无构建步骤
+- 原生 HTML / CSS / JavaScript，无框架、无运行时依赖
+- `src/` 按模块拆分，`scripts/build.js` 拼接为单文件 `app.js`
 - CSS 变量驱动主题，A4 固定画布 794 × 1123 px
 - Canvas 采样提取图片主色，规则匹配版式特征
 - Tesseract.js 在浏览器内 OCR（首次使用需联网加载引擎与语言包）
 - localStorage 持久化，JSON 导入导出用于跨设备迁移
+- 单元测试与无依赖的 CDP 端到端冒烟测试
 
 架构说明见 [docs/architecture.md](docs/architecture.md)。
 

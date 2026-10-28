@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="从简历截图复刻版式，生成可编辑、可打印的一页 A4 简历。本地优先，无需安装。">
   <meta name="theme-color" content="#eef2f7">
   <title>简历排版工作台</title>
   <link rel="stylesheet" href="styles.css">
@@ -179,7 +180,7 @@
   <input type="file" id="jsonInput" accept="application/json,.json" hidden>
   <input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp" hidden>
 
-  <div class="modal-backdrop" id="importModal" hidden>
+  <div class="modal-backdrop" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importTitle" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
       <button type="button" class="modal-close" data-close-modal aria-label="关闭">×</button>
       <div class="modal-eyebrow">STYLE IMPORT</div>
@@ -209,7 +210,7 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="ocrModal" hidden>
+  <div class="modal-backdrop" id="ocrModal" role="dialog" aria-modal="true" aria-labelledby="ocrTitle" hidden>
     <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="ocrTitle">
       <button type="button" class="modal-close" data-close-modal aria-label="关闭">×</button>
       <div class="modal-eyebrow">TEXT RECOGNITION</div>

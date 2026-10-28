@@ -4,8 +4,6 @@
 
 ## 本地运行
 
-项目没有构建步骤：
-
 ```bash
 git clone https://github.com/7AAAAAH/image-resume-studio.git
 cd image-resume-studio
@@ -13,6 +11,17 @@ cd image-resume-studio
 
 - 直接双击 `index.html`；
 - 或启动静态服务器：`python -m http.server 8080`。
+
+## 修改源码
+
+`app.js` 是由 `src/*.js` 拼接出的构建产物，请勿直接编辑。修改后运行：
+
+```bash
+npm run build
+npm test
+```
+
+提交前请确保 `npm run build:check` 通过，且 `app.js` 与源码一致。
 
 ## 提交前检查
 

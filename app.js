@@ -1,5 +1,9 @@
+/*! Image Resume Studio v0.2.0 | MIT | Generated from src/*.js - do not edit app.js directly. */
+// Fragment 00: bootstrap, default data, constants, state and utilities.
 (() => {
   "use strict";
+
+  const DEMO_AVATAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNzggMjIyIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IkRlbW8gYXZhdGFyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZGNlOGY3Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2I3Y2NlNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjE3OCIgaGVpZ2h0PSIyMjIiIGZpbGw9InVybCgjYmcpIi8+CiAgPGNpcmNsZSBjeD0iODkiIGN5PSI4NCIgcj0iMzciIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9IjAuODgiLz4KICA8cGF0aCBkPSJNMjIgMjIyYzUtNTQgMzMtODIgNjctODJzNjIgMjggNjcgODJ6IiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjg4Ii8+Cjwvc3ZnPg==";
 
   const DEFAULT_DATA = {
     version: 1,
@@ -9,7 +13,7 @@
     showPhoto: true,
     density: 96,
     margin: "standard",
-    photo: "headshot.svg",
+    photo: DEMO_AVATAR,
     basics: {
       name: "林一舟",
       role: "产品经理 / B端 SaaS",
@@ -116,7 +120,7 @@
   const escapeHtml = (str = "") => String(str).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   const safeRich = (str = "") => String(str)
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?(?!strong\b|b\b)[^>]+>/gi, "")
+    .replace(/<(?!\/?(?:strong|b)\b)[^>]+>/gi, "")
     .replace(/<(\/?)(strong|b)>/gi, "<$1strong>");
 
   let state = loadState();
@@ -129,8 +133,8 @@
   function normalizeData(input) {
     const base = clone(DEFAULT_DATA);
     const data = Object.assign(base, input || {});
-    data.basics = Object.assign(base.basics, input?.basics || {});
-    data.summary = Object.assign(base.summary, input?.summary || {});
+    data.basics = Object.assign(clone(DEFAULT_DATA.basics), input?.basics || {});
+    data.summary = Object.assign(clone(DEFAULT_DATA.summary), input?.summary || {});
     data.experience = Array.isArray(input?.experience) ? input.experience : base.experience;
     data.projects = Array.isArray(input?.projects) ? input.projects : base.projects;
     data.education = Array.isArray(input?.education) ? input.education : base.education;
@@ -179,6 +183,8 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
   }
+
+  // Fragment 10: resume preview rendering.
 
   function iconPhotoSvg() {
     return `<div class="photo-placeholder">照</div>`;
@@ -343,6 +349,8 @@
     return `#${to(ca.r * (1 - ratio) + cb.r * ratio)}${to(ca.g * (1 - ratio) + cb.g * ratio)}${to(ca.b * (1 - ratio) + cb.b * ratio)}`;
   }
 
+  // Fragment 20: left-hand editor UI.
+
   function renderEditor() {
     const root = $("#editorList");
     root.innerHTML = SECTION_META.map(meta => {
@@ -459,7 +467,10 @@
   function setPath(obj, path, value) {
     const parts = path.split(".");
     const last = parts.pop();
-    const target = parts.reduce((acc, key) => acc[key], obj);
+    const target = parts.reduce((acc, key) => {
+      if (!acc[key] || typeof acc[key] !== "object") acc[key] = {};
+      return acc[key];
+    }, obj);
     target[last] = value;
   }
 
@@ -510,6 +521,8 @@
     $("#pageMargin").value = state.margin;
     renderPresets();
   }
+
+  // Fragment 30: panels, zoom, overflow detection and auto-fit.
 
   function switchPanel(panel) {
     ui.panel = panel;
@@ -638,6 +651,8 @@
     renderPreview();
     saveState();
   }
+
+  // Fragment 40: image palette extraction, OCR and text parsing.
 
   function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
@@ -947,10 +962,62 @@
       .trim();
   }
 
-  function exportHtml() {
+  // Fragment 50: PDF, standalone HTML and JSON export.
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function canvasToDataUrl(img) {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      if (!canvas.width || !canvas.height) return "";
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      return canvas.toDataURL("image/png");
+    } catch {
+      return "";
+    }
+  }
+
+  async function inlineImages(sourceRoot, targetRoot) {
+    const sourceImages = [...sourceRoot.querySelectorAll("img")];
+    const targetImages = [...targetRoot.querySelectorAll("img")];
+    for (let index = 0; index < targetImages.length; index += 1) {
+      const img = targetImages[index];
+      const src = img.getAttribute("src");
+      if (!src || src.startsWith("data:")) continue;
+      let dataUrl = "";
+      try {
+        const response = await fetch(src);
+        if (response.ok) dataUrl = await blobToDataUrl(await response.blob());
+      } catch {
+        // file:// blocks fetch; fall back to the already decoded image.
+      }
+      if (!dataUrl) dataUrl = canvasToDataUrl(sourceImages[index]);
+      if (dataUrl) {
+        img.setAttribute("src", dataUrl);
+        continue;
+      }
+      try {
+        img.setAttribute("src", new URL(src, location.href).href);
+      } catch {
+        // Keep the original src when it cannot be resolved.
+      }
+    }
+  }
+
+  async function exportHtml() {
     const resume = $("#resumePage")?.cloneNode(true);
     if (!resume) return;
     resume.removeAttribute("id");
+    await inlineImages($("#resumePage"), resume);
     const css = `:root{--font-cn:"Noto Sans SC","Microsoft YaHei",sans-serif;--font-ui:"DM Sans",sans-serif}
       *{box-sizing:border-box}.resume-page{width:794px;height:1123px;min-height:1123px;background:#fff;position:relative;overflow:hidden;color:#202833;font-family:var(--font-cn)}
       .resume-content{width:100%;height:100%;position:relative;--accent:#1f67ed;--section-gap:25px;--line-height:1.55}
@@ -975,14 +1042,6 @@
       @media print{@page{size:A4;margin:0}body{background:#fff;padding:0;display:block}.resume-page{box-shadow:none!important}}`;
     const exportedBody = `body{margin:0;background:#e8edf4;display:flex;justify-content:center;padding:24px;font-family:"Noto Sans SC","Microsoft YaHei",sans-serif}.resume-page{box-shadow:0 18px 50px rgba(35,50,77,.15);flex:0 0 auto}
       @media print{@page{size:A4;margin:0}body{background:#fff;padding:0;display:block}.resume-page{box-shadow:none}}`;
-    const embedded = resume.innerHTML.replace(/src="([^"]+)"/g, (match, src) => {
-      if (src.startsWith("data:") || src.startsWith("http")) return match;
-      try {
-        const absolute = new URL(src, location.href).href;
-        return `src="${absolute}"`;
-      } catch { return match; }
-    });
-    resume.innerHTML = embedded;
     const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.basics.name)} - 简历</title><style>${exportedBody}${css}</style></head><body>${resume.outerHTML}</body></html>`;
     downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), `${state.basics.name || "简历"}-可编辑版.html`);
     toast("已导出独立 HTML");
@@ -1029,6 +1088,8 @@
     renderEditor(); renderPreview(); updateStyleControls(); saveState();
     toast("已恢复示例内容");
   }
+
+  // Fragment 90: event binding and app startup.
 
   function bindEvents() {
     $$(".step").forEach(btn => btn.addEventListener("click", () => switchPanel(btn.dataset.step)));
@@ -1111,7 +1172,7 @@
       try {
         const parsed = JSON.parse(await readFileAsText(file));
         state = normalizeData(parsed);
-        if (!state.photo) state.photo = "headshot.jpg";
+        if (!state.photo) state.photo = DEMO_AVATAR;
         renderEditor(); renderPreview(); updateStyleControls(); saveState();
         toast("JSON 内容已导入");
       } catch { toast("JSON 文件格式不正确"); }

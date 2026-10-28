@@ -7,11 +7,34 @@
 ```
 index.html      # 应用壳体：工具栏、编辑器容器、预览画布、弹窗
 styles.css      # 工作台 UI + 四套简历版式 + 打印样式
-app.js          # 状态、渲染、编辑、导入、导出、OCR
+app.js          # 构建产物：状态、渲染、编辑、导入、导出、OCR
 headshot.svg    # 示例头像
 ```
 
-运行时没有框架、没有打包器。`app.js` 是一个 IIFE，内部按功能分区。
+运行时没有框架、没有打包器。`app.js` 是一个 IIFE。
+
+### 1.1 源码与构建
+
+可维护源码按功能拆分在 `src/`：
+
+```
+src/00-core.js     # 默认数据、常量、状态、工具函数
+src/10-render.js   # 简历预览渲染
+src/20-editor.js   # 左侧编辑器
+src/30-layout.js   # 面板、缩放、溢出检测、一页适配
+src/40-import.js   # 取色、OCR、文本解析
+src/50-export.js   # PDF / HTML / JSON 导出
+src/90-main.js     # 事件绑定与启动
+```
+
+`scripts/build.js` 按文件名顺序拼接这些片段，输出单文件 `app.js`。这样既保留了 `file://` 双击即用的发布方式，也避免了一个 60KB 的单文件难以维护。
+
+```bash
+npm run build          # 生成 app.js
+npm run build:check    # CI 检查 app.js 是否与 src/ 同步
+npm run test:unit      # 纯函数单元测试
+npm run test:e2e       # 无依赖 CDP 冒烟测试
+```
 
 ## 2. 启动流程
 
@@ -131,7 +154,8 @@ v0.2 将增加配额检测与压缩提示。
 3. 单页固定，无多页分页；
 4. OCR 依赖 CDN，首次使用需联网；
 5. 无撤销/重做，无拖拽排序；
-6. 无自动化测试与类型检查。
+6. 仍无 TypeScript 类型检查，测试以关键纯函数与冒烟流程为主；
+7. 离线 OCR 语言包尚未内置。
 
 ## 10. 演进方向
 
