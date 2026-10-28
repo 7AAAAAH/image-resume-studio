@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef2f7">
+  <title>简历排版工作台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div>
+          <div class="brand-name">RESUME STUDIO</div>
+          <div class="brand-caption">一份内容，多种版式</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="save-state" id="saveState"><span class="save-dot"></span>本地自动保存</div>
+        <button class="button button-quiet" id="importButton" type="button">
+          <span class="button-icon">＋</span> 导入简历图片
+        </button>
+        <button class="button button-primary" id="exportButton" type="button">
+          <span class="button-icon">↓</span> 导出 PDF
+        </button>
+        <button class="button button-more" id="moreButton" type="button" aria-label="更多选项">•••</button>
+        <div class="menu" id="moreMenu" hidden>
+          <button type="button" data-action="export-html">导出 HTML</button>
+          <button type="button" data-action="export-json">导出 JSON</button>
+          <button type="button" data-action="import-json">导入 JSON</button>
+          <button type="button" data-action="reset">恢复示例内容</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar" aria-label="编辑工具">
+        <div class="sidebar-heading">
+          <div>
+            <div class="eyebrow">WORKBENCH</div>
+            <h1>排版控制台</h1>
+          </div>
+          <span class="draft-badge">草稿</span>
+        </div>
+
+        <nav class="step-nav" aria-label="工作流程">
+          <button type="button" class="step is-active" data-step="content">
+            <span class="step-number">01</span><span>编辑内容</span>
+          </button>
+          <button type="button" class="step" data-step="style">
+            <span class="step-number">02</span><span>选择样式</span>
+          </button>
+          <button type="button" class="step" data-step="fit">
+            <span class="step-number">03</span><span>一页适配</span>
+          </button>
+        </nav>
+
+        <section class="panel-section" data-panel="content">
+          <div class="section-title-row">
+            <h2>简历内容</h2>
+            <button type="button" class="text-button" id="collapseAll">全部收起</button>
+          </div>
+          <div class="editor-list" id="editorList"></div>
+          <button type="button" class="add-section" id="addSection">＋ 添加自定义经历</button>
+        </section>
+
+        <section class="panel-section" data-panel="style" hidden>
+          <div class="section-title-row">
+            <h2>视觉风格</h2>
+            <span class="micro-label">实时预览</span>
+          </div>
+          <div class="preset-grid" id="presetGrid"></div>
+          <div class="control-block">
+            <label class="control-label" for="accentColor">强调色</label>
+            <div class="color-row">
+              <input type="color" id="accentColor" value="#1f67ed">
+              <div class="swatch-list" id="swatchList"></div>
+            </div>
+          </div>
+          <div class="control-block">
+            <label class="control-label" for="densityRange">内容密度 <span id="densityValue">舒适</span></label>
+            <input type="range" id="densityRange" min="80" max="112" value="96">
+          </div>
+          <div class="control-block">
+            <label class="control-label" for="headerShape">头部轮廓</label>
+            <select id="headerShape">
+              <option value="rounded">柔和圆角</option>
+              <option value="straight">利落直角</option>
+              <option value="arch">侧边弧形</option>
+            </select>
+          </div>
+          <label class="switch-row">
+            <span>显示头像</span>
+            <input type="checkbox" id="showPhoto" checked>
+            <span class="switch"></span>
+          </label>
+        </section>
+
+        <section class="panel-section" data-panel="fit" hidden>
+          <div class="section-title-row">
+            <h2>一页适配</h2>
+            <span class="fit-status" id="fitStatus">检查中</span>
+          </div>
+          <div class="fit-visual">
+            <div class="mini-page">
+              <div class="mini-header"></div>
+              <div class="mini-line w90"></div>
+              <div class="mini-line w100"></div>
+              <div class="mini-line w76"></div>
+              <div class="mini-line w95"></div>
+              <div class="mini-line w84"></div>
+              <div class="mini-line w98"></div>
+              <div class="mini-line w72"></div>
+            </div>
+            <div class="fit-visual-copy">
+              <strong id="pageUsage">100%</strong>
+              <span>A4 页面占用</span>
+            </div>
+          </div>
+          <button type="button" class="button button-primary button-wide" id="autoFitButton">
+            <span class="sparkle">✦</span> 智能压缩至一页
+          </button>
+          <div class="hint-box">
+            <strong>智能排版逻辑</strong>
+            <p>根据内容高度自动调整字号、段距和区块间距，优先保留可读性；若内容过多，会提示精简条目，而不是无限制缩小。</p>
+          </div>
+          <div class="control-block">
+            <label class="control-label" for="pageMargin">页边距</label>
+            <select id="pageMargin">
+              <option value="compact">紧凑</option>
+              <option value="standard" selected>标准</option>
+              <option value="airy">宽松</option>
+            </select>
+          </div>
+        </section>
+
+        <div class="sidebar-footer">
+          <div class="privacy-note"><span class="shield">◇</span> 内容仅保存在此浏览器</div>
+          <div class="shortcut-note">⌘ / Ctrl + S 保存 · Ctrl + P 打印</div>
+        </div>
+      </aside>
+
+      <section class="preview-area" aria-label="简历预览">
+        <div class="preview-toolbar">
+          <div class="preview-title">
+            <span class="status-dot"></span>
+            <span id="previewTitle">实时预览</span>
+            <span class="a4-label">A4 · 210 × 297 mm</span>
+          </div>
+          <div class="preview-tools">
+            <button type="button" class="icon-button" id="zoomOut" aria-label="缩小">−</button>
+            <span class="zoom-label" id="zoomLabel">80%</span>
+            <button type="button" class="icon-button" id="zoomIn" aria-label="放大">＋</button>
+            <button type="button" class="icon-button" id="fitWidth" aria-label="适合宽度">⤢</button>
+            <span class="tool-divider"></span>
+            <button type="button" class="icon-button" id="fullscreenButton" aria-label="全屏预览">⛶</button>
+          </div>
+        </div>
+        <div class="paper-stage" id="paperStage">
+          <div class="paper-scaler" id="paperScaler">
+            <article class="resume-page" id="resumePage" aria-label="可编辑简历预览">
+              <div class="resume-content" id="resumeContent"></div>
+            </article>
+          </div>
+        </div>
+        <div class="stage-footer">
+          <div><span class="live-pulse"></span> 编辑后自动更新</div>
+          <div id="overflowNotice">版面状态良好</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp" hidden>
+  <input type="file" id="jsonInput" accept="application/json,.json" hidden>
+  <input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp" hidden>
+
+  <div class="modal-backdrop" id="importModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+      <button type="button" class="modal-close" data-close-modal aria-label="关闭">×</button>
+      <div class="modal-eyebrow">STYLE IMPORT</div>
+      <h2 id="importTitle">从简历图片生成模板</h2>
+      <p class="modal-lead">上传另一张简历截图，系统会提取视觉风格、识别文字，并用当前内容生成对应的可编辑版式。</p>
+      <div class="drop-zone" id="dropZone" tabindex="0">
+        <div class="drop-icon">↥</div>
+        <strong>拖入简历图片，或点击选择</strong>
+        <span>支持 PNG / JPG / WEBP，建议使用清晰、正向的截图</span>
+      </div>
+      <div class="import-options">
+        <label class="option-row">
+          <input type="checkbox" id="ocrToggle" checked>
+          <span class="checkbox-ui"></span>
+          <span><strong>识别图片中的文字</strong><small>在本地浏览器中完成 OCR，不上传图片</small></span>
+        </label>
+        <label class="option-row">
+          <input type="checkbox" id="mergeToggle" checked>
+          <span class="checkbox-ui"></span>
+          <span><strong>用识别内容更新当前简历</strong><small>关闭时仅套用样式，保留当前文字</small></span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <span class="import-status" id="importStatus">等待选择图片</span>
+        <button type="button" class="button button-primary" id="chooseImageButton">选择图片</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="ocrModal" hidden>
+    <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="ocrTitle">
+      <button type="button" class="modal-close" data-close-modal aria-label="关闭">×</button>
+      <div class="modal-eyebrow">TEXT RECOGNITION</div>
+      <h2 id="ocrTitle">校对识别内容</h2>
+      <p class="modal-lead">OCR 可能误识别姓名、数字或英文缩写。请校对后生成新版简历。</p>
+      <div class="ocr-progress" id="ocrProgress"><span></span></div>
+      <textarea id="ocrText" class="ocr-textarea" spellcheck="false"></textarea>
+      <div class="modal-footer">
+        <span class="import-status" id="ocrStatus">正在读取图片</span>
+        <button type="button" class="button button-primary" id="applyOcrButton">生成新版简历</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="print-root" id="printRoot" aria-hidden="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

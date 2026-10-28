@@ -1,0 +1,51 @@
+name: Bug 报告
+description: 报告一个可以复现的问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。提交前请先确认问题可以在最新版本复现，并对截图与文本做脱敏处理。
+  - type: input
+    id: browser
+    attributes:
+      label: 浏览器与版本
+      placeholder: 例如 Edge 141 / Chrome 140 / Firefox 143
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开 index.html
+        2. 导入图片
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 如有报错，请粘贴控制台信息。
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或附件
+      description: 请确保不包含真实个人信息。
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我已确认提交的内容不包含真实个人信息
+          required: true

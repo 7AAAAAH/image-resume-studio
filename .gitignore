@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Environment
+.env
+.env.*
+
+# Personal resume exports (never commit real personal data)
+*-简历.pdf
+*-简历-可编辑版.html
+*-内容备份.json
