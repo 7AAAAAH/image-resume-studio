@@ -2,6 +2,28 @@
 
 所有重要变更都会记录在这里。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.3.0-alpha.2] - 2026-10-28
+
+### Added
+
+- 可选 BYOK 视觉模型版式解析，支持 OpenAI、OpenAI 兼容接口与 Anthropic Claude；
+- `••• > AI 设置`，Base URL、模型名、API Key 与服务商均可配置；
+- 图片导入后可在“本地解析”和“AI 精确解析”之间明确选择；
+- AI 模型只输出模板 DSL，再由本地渲染器应用，失败时保留启发式结果；
+- AI 设置弹窗、缺失密钥不发请求的 E2E 测试；
+- OpenAI / Claude 请求体、JSON 提取与安全默认值的单元测试。
+
+### Security
+
+- API Key 默认只保存在内存；只有主动勾选“在这台设备记住设置”后才写入 localStorage；
+- AI 解析不会在页面加载或选择图片时自动触发，必须由用户点击按钮；
+- 界面明确提示启用 AI 时图片会发送到所选服务商。
+
+### Changed
+
+- 单元测试增加到 18 个；
+- 图片导入改为先展示本地分析结果，再选择是否进行 OCR 或 AI 解析。
+
 ## [0.3.0-alpha.1] - 2026-10-28
 
 ### Added

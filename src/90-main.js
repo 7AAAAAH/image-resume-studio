@@ -61,9 +61,14 @@
       if (btn.dataset.action === "import-json") $("#jsonInput").click();
       if (btn.dataset.action === "export-template") exportTemplate();
       if (btn.dataset.action === "import-template") $("#templateInput").click();
+      if (btn.dataset.action === "ai-settings") openAiSettings();
       if (btn.dataset.action === "reset") resetAll();
     });
     $("#chooseImageButton").addEventListener("click", () => $("#imageInput").click());
+    $("#useLocalLayoutButton").addEventListener("click", useLocalLayout);
+    $("#aiAnalyzeButton").addEventListener("click", runAiLayoutAnalysis);
+    $("#aiProvider").addEventListener("change", updateAiPlaceholders);
+    $("#saveAiSettingsButton").addEventListener("click", saveAiSettingsFromForm);
     $("#dropZone").addEventListener("click", () => $("#imageInput").click());
     $("#dropZone").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") $("#imageInput").click(); });
     ["dragenter", "dragover"].forEach(type => $("#dropZone").addEventListener(type, e => { e.preventDefault(); $("#dropZone").classList.add("is-over"); }));
@@ -95,14 +100,18 @@
       await importTemplateFile(file);
       e.target.value = "";
     });
-    $$("[data-close-modal]").forEach(btn => btn.addEventListener("click", () => { $("#importModal").hidden = true; $("#ocrModal").hidden = true; }));
+    $$("[data-close-modal]").forEach(btn => btn.addEventListener("click", () => {
+      $("#importModal").hidden = true;
+      $("#ocrModal").hidden = true;
+      $("#aiModal").hidden = true;
+    }));
     $$(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", e => { if (e.target === backdrop) backdrop.hidden = true; }));
     $("#applyOcrButton").addEventListener("click", () => applyImportedStyle(true));
     window.addEventListener("beforeprint", () => { preparePrintRoot(); });
     window.addEventListener("afterprint", () => { $("#printRoot").innerHTML = ""; });
     document.addEventListener("keydown", e => {
       if (e.key === "Escape") {
-        $("#importModal").hidden = true; $("#ocrModal").hidden = true; $("#moreMenu").hidden = true;
+        $("#importModal").hidden = true; $("#ocrModal").hidden = true; $("#aiModal").hidden = true; $("#moreMenu").hidden = true;
         $("#paperStage").classList.remove("is-fullscreen"); updateZoom();
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveState(false); }

@@ -25,6 +25,7 @@ src/30-layout.js   # 面板、缩放、溢出检测、一页适配
 src/40-import.js   # 取色、OCR、文本解析
 src/50-export.js   # PDF / HTML / JSON 导出
 src/60-template.js # 模板 DSL 与模板导入导出
+src/70-ai.js       # 可选 BYOK 视觉模型适配器
 src/90-main.js     # 事件绑定与启动
 ```
 
@@ -150,6 +151,20 @@ autoFit()              在 density 80-112 区间二分/递减，找到最小可�
 
 当前限制：版式识别只用了宽高比，无法识别卡片、分栏、圆角。v0.3 将改为"视觉模型输出 DSL + 本地渲染"。
 
+### 6.1 可选 AI 版式解析
+
+```
+用户点击 AI 精确解析
+  → aiRequestFor()       按服务商构造 OpenAI / Anthropic 视觉请求
+  → analyzeLayoutWithAi() 发送图片并读取严格 JSON
+  → extractJsonObject()  容忍 Markdown 代码围栏，但拒绝无效 JSON
+  → normalizeTemplate()  把所有字段限制在白名单与安全范围
+  → applyTemplate()      只修改视觉状态，不覆盖简历正文
+  → 继续 OCR 或仅套用样式
+```
+
+支持 OpenAI、OpenAI 兼容接口和 Anthropic Claude。API Key 默认只保存在内存，只有用户主动勾选后才写入 localStorage。AI 不会被页面加载、图片选择等隐式操作触发。
+
 ## 7. 导出管线
 
 ### PDF
@@ -175,7 +190,7 @@ v0.2 将增加配额检测与压缩提示。
 
 ## 9. 已知限制
 
-1. 版式识别为启发式，不是真正的版面理解；
+1. 本地版式识别仍以启发式为主，复杂卡片结构建议启用可选 AI；
 2. 富文本仅支持少量标签；
 3. 单页固定，无多页分页；
 4. OCR 依赖 CDN，首次使用需联网；

@@ -35,6 +35,7 @@
           <button type="button" data-action="import-json">导入 JSON</button>
           <button type="button" data-action="export-template">导出模板</button>
           <button type="button" data-action="import-template">导入模板</button>
+          <button type="button" data-action="ai-settings">AI 设置</button>
           <button type="button" data-action="reset">恢复示例内容</button>
         </div>
       </div>
@@ -206,6 +207,16 @@
           <span><strong>用识别内容更新当前简历</strong><small>关闭时仅套用样式，保留当前文字</small></span>
         </label>
       </div>
+      <div class="import-result-actions" id="importResultActions" hidden>
+        <div>
+          <strong>本地版式已分析</strong>
+          <small>可继续使用本地规则，或将图片发送给你配置的 AI 服务做精确解析。</small>
+        </div>
+        <div class="import-result-buttons">
+          <button type="button" class="button button-quiet" id="useLocalLayoutButton">使用本地解析</button>
+          <button type="button" class="button button-ai" id="aiAnalyzeButton"><span class="sparkle">✦</span> AI 精确解析</button>
+        </div>
+      </div>
       <div class="modal-footer">
         <span class="import-status" id="importStatus">等待选择图片</span>
         <button type="button" class="button button-primary" id="chooseImageButton">选择图片</button>
@@ -224,6 +235,50 @@
       <div class="modal-footer">
         <span class="import-status" id="ocrStatus">正在读取图片</span>
         <button type="button" class="button button-primary" id="applyOcrButton">生成新版简历</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="aiModal" role="dialog" aria-modal="true" aria-labelledby="aiTitle" hidden>
+    <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+      <button type="button" class="modal-close" data-close-modal aria-label="关闭">×</button>
+      <div class="modal-eyebrow">OPTIONAL AI · BYOK</div>
+      <h2 id="aiTitle">配置视觉模型</h2>
+      <p class="modal-lead">AI 仅在点击“AI 精确解析”时调用。接口密钥由你自行提供，不会进入本项目的服务器。</p>
+      <div class="ai-form">
+        <label class="field is-wide">
+          <span class="field-label">服务商</span>
+          <select id="aiProvider">
+            <option value="openai">OpenAI</option>
+            <option value="compatible">OpenAI 兼容（Qwen / GLM / 自定义）</option>
+            <option value="anthropic">Anthropic Claude</option>
+          </select>
+        </label>
+        <label class="field is-wide">
+          <span class="field-label">Base URL</span>
+          <input id="aiBase" type="url" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field is-wide">
+          <span class="field-label">模型名称</span>
+          <input id="aiModel" type="text" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field is-wide">
+          <span class="field-label">API Key</span>
+          <input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="仅保存在当前页面或本机浏览器">
+        </label>
+      </div>
+      <label class="option-row ai-remember">
+        <input type="checkbox" id="aiRemember">
+        <span class="checkbox-ui"></span>
+        <span><strong>在这台设备记住设置</strong><small>勾选后使用 localStorage 保存 API Key；公共电脑请勿勾选。</small></span>
+      </label>
+      <div class="privacy-warning">
+        <strong>隐私提示</strong>
+        <span>启用 AI 解析时，当前简历图片会发送到你选择的服务商。简历正文仍只在本地渲染和保存。</span>
+      </div>
+      <div class="modal-footer ai-modal-footer">
+        <span class="import-status" id="aiProviderHint"></span>
+        <button type="button" class="button button-primary" id="saveAiSettingsButton">保存设置</button>
       </div>
     </div>
   </div>

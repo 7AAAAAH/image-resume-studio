@@ -1,4 +1,4 @@
-/*! Image Resume Studio v0.3.0-alpha.1 | MIT | Generated from src/*.js - do not edit app.js directly. */
+/*! Image Resume Studio v0.3.0-alpha.2 | MIT | Generated from src/*.js - do not edit app.js directly. */
 // Fragment 00: bootstrap, default data, constants, state and utilities.
 (() => {
   "use strict";
@@ -910,46 +910,63 @@
   }
 
   function openImportModal() {
+    importContext = { image: null, palette: null, features: null, text: "", file: null };
     $("#importModal").hidden = false;
+    $("#importResultActions").hidden = true;
     $("#importStatus").textContent = "等待选择图片";
+    $("#chooseImageButton").textContent = "选择图片";
   }
 
   async function beginImageImport(file) {
     if (!file || !file.type.startsWith("image/")) return toast("请选择 PNG、JPG 或 WEBP 图片");
     $("#importStatus").textContent = "正在分析版式与配色…";
+    $("#importResultActions").hidden = true;
+    $("#chooseImageButton").textContent = "重新选择";
     try {
       const result = await analyzeImage(file);
-      importContext = { image: result.dataUrl, palette: result.palette, features: result.features, text: "" };
+      importContext = { image: result.dataUrl, palette: result.palette, features: result.features, text: "", file };
       const detected = result.features;
-      const shapeLabel = detected.shape === "rounded" ? "圆角头部" : "直角头部";
+      const shapeLabel = detected.shape === "rounded" ? "圆角头部" : detected.shape === "arch" ? "拱形头部" : "直角头部";
       $("#importStatus").textContent = `版式分析完成 · ${LAYOUT_TEMPLATE_NAMES[detected.template]} · ${shapeLabel} · ${Math.round(detected.confidence * 100)}%`;
-      $("#importModal").hidden = true;
-      if ($("#mergeToggle").checked) {
-        $("#ocrModal").hidden = false;
-        $("#ocrText").value = "正在识别图片文字，请稍候…";
-        $("#ocrProgress span").style.width = "12%";
-        $("#ocrStatus").textContent = "正在加载 OCR 引擎";
-        try {
-          const preparedImage = await makeOcrFriendlyImage(file);
-          const result = await recognizeWithOcr(preparedImage);
-          const text = cleanOcrText(result.data.text || "");
-          importContext.text = text;
-          $("#ocrText").value = text || "未识别到清晰文字。请保留当前内容，或在此粘贴图片中的简历文字。";
-          $("#ocrStatus").textContent = "识别完成，请校对";
-          $("#ocrProgress span").style.width = "100%";
-        } catch (error) {
-          console.warn(error);
-          $("#ocrText").value = "OCR 引擎未能加载。你可以在这里粘贴图片中的简历文字，或取消后仅套用视觉样式。";
-          $("#ocrStatus").textContent = "OCR 不可用，可手动粘贴文字";
-          $("#ocrProgress span").style.width = "100%";
-        }
-      } else {
-        applyImportedStyle(false);
-      }
+      $("#importResultActions").hidden = false;
     } catch (error) {
       console.error(error);
       $("#importStatus").textContent = "图片分析失败，请换一张图片";
+      $("#chooseImageButton").textContent = "选择图片";
       toast("图片读取失败");
+    }
+  }
+
+  function useLocalLayout() {
+    if (!importContext.features) return toast("请先选择简历图片");
+    $("#importModal").hidden = true;
+    continueImageImport();
+  }
+
+  async function continueImageImport() {
+    if ($("#mergeToggle").checked) return startImportOcr();
+    applyImportedStyle(false);
+  }
+
+  async function startImportOcr() {
+    if (!importContext.file) return toast("请先选择简历图片");
+    $("#ocrModal").hidden = false;
+    $("#ocrText").value = "正在识别图片文字，请稍候…";
+    $("#ocrProgress span").style.width = "12%";
+    $("#ocrStatus").textContent = "正在加载 OCR 引擎";
+    try {
+      const preparedImage = await makeOcrFriendlyImage(importContext.file);
+      const result = await recognizeWithOcr(preparedImage);
+      const text = cleanOcrText(result.data.text || "");
+      importContext.text = text;
+      $("#ocrText").value = text || "未识别到清晰文字。请保留当前内容，或在此粘贴图片中的简历文字。";
+      $("#ocrStatus").textContent = "识别完成，请校对";
+      $("#ocrProgress span").style.width = "100%";
+    } catch (error) {
+      console.warn(error);
+      $("#ocrText").value = "OCR 引擎未能加载。你可以在这里粘贴图片中的简历文字，或取消后仅套用视觉样式。";
+      $("#ocrStatus").textContent = "OCR 不可用，可手动粘贴文字";
+      $("#ocrProgress span").style.width = "100%";
     }
   }
 
@@ -970,6 +987,8 @@
     state.headerShape = importContext.features.shape;
     state.density = importContext.features.density;
     state.accent = importContext.palette?.accent || state.accent;
+    if (importContext.features.margin) state.margin = importContext.features.margin;
+    if (typeof importContext.features.showPhoto === "boolean") state.showPhoto = importContext.features.showPhoto;
     if (withText) {
       const parsed = parseResumeText($("#ocrText").value);
       if (parsed) state = Object.assign(state, parsed, { photo: oldPhoto, accent: oldAccent });
@@ -1306,6 +1325,248 @@
       toast("模板文件格式不正确");
     }
   }
+// Fragment 70: optional BYOK vision model adapter for layout analysis.
+  const AI_SETTINGS_KEY = "resume-studio-ai-v1";
+  const AI_PROVIDERS = {
+    openai: {
+      label: "OpenAI",
+      adapter: "openai",
+      defaultBase: "https://api.openai.com/v1",
+      defaultModel: "gpt-4.1-mini"
+    },
+    compatible: {
+      label: "OpenAI 兼容（Qwen / GLM / 自定义）",
+      adapter: "openai",
+      defaultBase: "",
+      defaultModel: ""
+    },
+    anthropic: {
+      label: "Anthropic Claude",
+      adapter: "anthropic",
+      defaultBase: "https://api.anthropic.com/v1",
+      defaultModel: "claude-sonnet-4-5"
+    }
+  };
+
+  let aiSessionSettings = null;
+
+  function defaultAiSettings() {
+    return { provider: "openai", base: "", model: "", apiKey: "", remember: false };
+  }
+
+  function loadAiSettings() {
+    if (aiSessionSettings) return { ...aiSessionSettings };
+    try {
+      const raw = localStorage.getItem(AI_SETTINGS_KEY);
+      if (raw) return { ...defaultAiSettings(), ...JSON.parse(raw) };
+    } catch {
+      // Storage can be unavailable in private mode; fall back to defaults.
+    }
+    return defaultAiSettings();
+  }
+
+  function persistAiSettings(settings) {
+    aiSessionSettings = { ...settings };
+    try {
+      if (settings.remember && settings.apiKey) localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
+      else localStorage.removeItem(AI_SETTINGS_KEY);
+    } catch {
+      // Ignore quota/private-mode errors; the key remains in memory for this session.
+    }
+  }
+
+  function resolvedAiSettings(settings = loadAiSettings()) {
+    const provider = AI_PROVIDERS[settings.provider] ? settings.provider : "openai";
+    const meta = AI_PROVIDERS[provider];
+    return {
+      ...settings,
+      provider,
+      base: String(settings.base || meta.defaultBase || "").replace(/\/+$/, ""),
+      model: String(settings.model || meta.defaultModel || "").trim(),
+      apiKey: String(settings.apiKey || "").trim()
+    };
+  }
+
+  function buildVisionPrompt() {
+    return [
+      "你是一名资深简历版式分析师。请只分析这张简历截图的视觉版式，不要复述或提取任何个人隐私内容。",
+      "",
+      "请从以下固定选项中选择最接近的一项：",
+      "- layout.template: classic（顶部色块 + 单栏）、sidebar（顶部头部 + 侧栏）、editorial（浅色头部 + 编辑感留白）、minimal（白底 + 细线标题）",
+      "- theme.headerShape: rounded（头部卡片右下角圆角）、straight（直角）、arch（拱形）",
+      "- theme.density: 80-112 的整数，版面越紧凑数值越小",
+      "- page.margin: compact / standard / airy",
+      "- theme.showPhoto: 是否有证件照",
+      "- theme.accent: 主色的十六进制值",
+      "",
+      "只输出严格 JSON，不要 Markdown，不要解释：",
+      '{"version":1,"name":"简短模板名","page":{"size":"A4","margin":"standard"},"theme":{"accent":"#2563eb","headerShape":"rounded","density":96,"showPhoto":true},"layout":{"template":"classic"}}'
+    ].join("\n");
+  }
+
+  function aiRequestFor(providerId, settings, imageDataUrl) {
+    const meta = AI_PROVIDERS[providerId];
+    if (!meta) throw new Error("未知的 AI 服务商");
+    const base = String(settings.base || "").replace(/\/+$/, "");
+    if (!base) throw new Error("请填写 Base URL");
+    if (!settings.model) throw new Error("请填写模型名称");
+    if (!settings.apiKey) throw new Error("请填写 API Key");
+
+    if (meta.adapter === "anthropic") {
+      const match = /^data:([^;]+);base64,(.+)$/.exec(imageDataUrl);
+      if (!match) throw new Error("图片格式不受支持");
+      return {
+        url: `${base}/messages`,
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": settings.apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: {
+          model: settings.model,
+          max_tokens: 1200,
+          temperature: 0,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: match[1], data: match[2] } },
+              { type: "text", text: buildVisionPrompt() }
+            ]
+          }]
+        }
+      };
+    }
+
+    return {
+      url: `${base}/chat/completions`,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.apiKey}`
+      },
+      body: {
+        model: settings.model,
+        temperature: 0,
+        max_tokens: 900,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: buildVisionPrompt() },
+            { type: "image_url", image_url: { url: imageDataUrl, detail: "high" } }
+          ]
+        }]
+      }
+    };
+  }
+
+  function extractJsonObject(text) {
+    if (!text) return null;
+    const source = String(text);
+    const fenced = source.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const candidate = fenced ? fenced[1] : source;
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    try {
+      return JSON.parse(candidate.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+
+  async function analyzeLayoutWithAi(imageDataUrl, rawSettings = loadAiSettings()) {
+    const settings = resolvedAiSettings(rawSettings);
+    const request = aiRequestFor(settings.provider, settings, imageDataUrl);
+    const response = await fetch(request.url, {
+      method: "POST",
+      headers: request.headers,
+      body: JSON.stringify(request.body)
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`服务返回 ${response.status}${detail ? `：${detail.slice(0, 160)}` : ""}`);
+    }
+    const data = await response.json();
+    const text = AI_PROVIDERS[settings.provider].adapter === "anthropic"
+      ? (data.content || []).map(part => part.text || "").join("")
+      : data.choices?.[0]?.message?.content || "";
+    const parsed = extractJsonObject(text);
+    if (!parsed) throw new Error("模型没有返回可解析的 JSON");
+    return normalizeTemplate(parsed);
+  }
+
+  function updateAiPlaceholders() {
+    const meta = AI_PROVIDERS[$("#aiProvider").value] || AI_PROVIDERS.openai;
+    $("#aiBase").placeholder = meta.defaultBase || "https://your-endpoint/v1";
+    $("#aiModel").placeholder = meta.defaultModel || "模型名称";
+    $("#aiProviderHint").textContent = meta.adapter === "anthropic"
+      ? "Claude 会通过官方 Messages API 接收图片。"
+      : "OpenAI 兼容接口：Base URL 通常以 /v1 结尾，模型需支持图片输入。";
+  }
+
+  function openAiSettings() {
+    const settings = loadAiSettings();
+    $("#aiProvider").value = settings.provider;
+    $("#aiBase").value = settings.base;
+    $("#aiModel").value = settings.model;
+    $("#aiKey").value = settings.apiKey;
+    $("#aiRemember").checked = settings.remember;
+    updateAiPlaceholders();
+    $("#aiModal").hidden = false;
+  }
+
+  function saveAiSettingsFromForm() {
+    const settings = {
+      provider: $("#aiProvider").value,
+      base: $("#aiBase").value.trim(),
+      model: $("#aiModel").value.trim(),
+      apiKey: $("#aiKey").value.trim(),
+      remember: $("#aiRemember").checked
+    };
+    persistAiSettings(settings);
+    $("#aiModal").hidden = true;
+    toast(settings.apiKey ? "AI 设置已保存" : "AI 设置已保存（未填写 API Key）");
+  }
+
+  async function runAiLayoutAnalysis() {
+    const settings = loadAiSettings();
+    if (!settings.apiKey) {
+      openAiSettings();
+      toast("请先配置 AI 服务，再点击 AI 精确解析");
+      return;
+    }
+    if (!importContext.image) {
+      toast("请先导入一张简历图片");
+      return;
+    }
+    const button = $("#aiAnalyzeButton");
+    if (button) button.disabled = true;
+    $("#importStatus").textContent = "AI 正在解析版式，图片将发送到你配置的服务商…";
+    try {
+      const template = await analyzeLayoutWithAi(importContext.image, settings);
+      applyTemplate(template);
+      importContext.features = {
+        ...(importContext.features || {}),
+        template: template.layout.template,
+        shape: template.theme.headerShape,
+        density: template.theme.density,
+        margin: template.page.margin,
+        showPhoto: template.theme.showPhoto
+      };
+      importContext.palette = { ...(importContext.palette || {}), accent: template.theme.accent };
+      $("#importStatus").textContent = `AI 已应用：${template.name}`;
+      $("#importModal").hidden = true;
+      toast("AI 版式已应用，正在继续处理内容");
+      await continueImageImport();
+    } catch (error) {
+      console.warn(error);
+      $("#importStatus").textContent = "AI 解析失败，已保留本地解析结果";
+      toast(`AI 解析失败：${String(error.message || error).slice(0, 60)}`);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   // Fragment 90: event binding and app startup.
 
   function bindEvents() {
@@ -1369,9 +1630,14 @@
       if (btn.dataset.action === "import-json") $("#jsonInput").click();
       if (btn.dataset.action === "export-template") exportTemplate();
       if (btn.dataset.action === "import-template") $("#templateInput").click();
+      if (btn.dataset.action === "ai-settings") openAiSettings();
       if (btn.dataset.action === "reset") resetAll();
     });
     $("#chooseImageButton").addEventListener("click", () => $("#imageInput").click());
+    $("#useLocalLayoutButton").addEventListener("click", useLocalLayout);
+    $("#aiAnalyzeButton").addEventListener("click", runAiLayoutAnalysis);
+    $("#aiProvider").addEventListener("change", updateAiPlaceholders);
+    $("#saveAiSettingsButton").addEventListener("click", saveAiSettingsFromForm);
     $("#dropZone").addEventListener("click", () => $("#imageInput").click());
     $("#dropZone").addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") $("#imageInput").click(); });
     ["dragenter", "dragover"].forEach(type => $("#dropZone").addEventListener(type, e => { e.preventDefault(); $("#dropZone").classList.add("is-over"); }));
@@ -1403,14 +1669,18 @@
       await importTemplateFile(file);
       e.target.value = "";
     });
-    $$("[data-close-modal]").forEach(btn => btn.addEventListener("click", () => { $("#importModal").hidden = true; $("#ocrModal").hidden = true; }));
+    $$("[data-close-modal]").forEach(btn => btn.addEventListener("click", () => {
+      $("#importModal").hidden = true;
+      $("#ocrModal").hidden = true;
+      $("#aiModal").hidden = true;
+    }));
     $$(".modal-backdrop").forEach(backdrop => backdrop.addEventListener("click", e => { if (e.target === backdrop) backdrop.hidden = true; }));
     $("#applyOcrButton").addEventListener("click", () => applyImportedStyle(true));
     window.addEventListener("beforeprint", () => { preparePrintRoot(); });
     window.addEventListener("afterprint", () => { $("#printRoot").innerHTML = ""; });
     document.addEventListener("keydown", e => {
       if (e.key === "Escape") {
-        $("#importModal").hidden = true; $("#ocrModal").hidden = true; $("#moreMenu").hidden = true;
+        $("#importModal").hidden = true; $("#ocrModal").hidden = true; $("#aiModal").hidden = true; $("#moreMenu").hidden = true;
         $("#paperStage").classList.remove("is-fullscreen"); updateZoom();
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveState(false); }

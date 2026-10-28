@@ -26,6 +26,7 @@
 ## 功能
 
 - **图片转模板**：从截图检测主色、头部高度、右下圆角与侧栏，自动匹配四种基础版式并给出置信度
+- **可选 AI 精确解析**：自带 API Key 调用 OpenAI、Claude 或 OpenAI 兼容视觉模型，把截图层级与卡片结构转换为模板 DSL
 - **模板 DSL**：样式与内容分离，可导出 / 导入 `.resume-template.json`，方便复用与分享
 - **内容可编辑**：基本资料、个人总结、工作经历、项目经历、教育、技能、自定义经历
 - **四种版式**：蓝白经典 / 左侧信息栏 / 编辑感留白 / 极简线条
@@ -34,6 +35,8 @@
 - **三种导出**：PDF（浏览器打印）、独立 HTML、JSON
 - **本地优先**：内容保存在浏览器 localStorage，不上传服务器
 - **OCR 校对**：识别后先校对姓名、电话、日期与数字，再生成内容
+
+> AI 是可选能力。默认流程完全不调用外部模型；只有配置密钥并主动点击“AI 精确解析”时，简历图片才会发送到所选服务商。
 
 ## 快速开始
 
@@ -115,13 +118,15 @@ npm test
 ## 隐私与数据
 
 - 简历内容只保存在当前浏览器的 localStorage；
-- 图片不会上传到任何服务器；
+- 默认的本地配色与启发式版式分析不会上传图片；
 - OCR 引擎与语言包由 CDN 加载，首次使用需要联网；
+- 使用 AI 精确解析时，当前图片会发送到你配置的模型服务商；模型仅返回模板 DSL，不接管正文渲染；
+- AI API Key 默认只保存在内存；勾选“在这台设备记住设置”后才存入 localStorage；
 - 仓库内的示例简历为虚构数据（林一舟 / demo@example.com）。
 
 ## English
 
-Image Resume Studio turns a screenshot of an existing resume into an editable, print-ready A4 resume. It extracts the palette and layout cues, runs in-browser OCR, and keeps everything local. No build step, no server, no account. See [docs/roadmap.md](docs/roadmap.md) for the roadmap.
+Image Resume Studio turns a screenshot of an existing resume into an editable, print-ready A4 resume. It extracts palette and layout cues locally, with optional BYOK vision-model analysis for harder card and hierarchy patterns. The local renderer remains the source of truth. No account, server, or build step is required to use the app. See [docs/roadmap.md](docs/roadmap.md) for the roadmap.
 
 ## 贡献
 

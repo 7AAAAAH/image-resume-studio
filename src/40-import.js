@@ -256,46 +256,63 @@
   }
 
   function openImportModal() {
+    importContext = { image: null, palette: null, features: null, text: "", file: null };
     $("#importModal").hidden = false;
+    $("#importResultActions").hidden = true;
     $("#importStatus").textContent = "等待选择图片";
+    $("#chooseImageButton").textContent = "选择图片";
   }
 
   async function beginImageImport(file) {
     if (!file || !file.type.startsWith("image/")) return toast("请选择 PNG、JPG 或 WEBP 图片");
     $("#importStatus").textContent = "正在分析版式与配色…";
+    $("#importResultActions").hidden = true;
+    $("#chooseImageButton").textContent = "重新选择";
     try {
       const result = await analyzeImage(file);
-      importContext = { image: result.dataUrl, palette: result.palette, features: result.features, text: "" };
+      importContext = { image: result.dataUrl, palette: result.palette, features: result.features, text: "", file };
       const detected = result.features;
-      const shapeLabel = detected.shape === "rounded" ? "圆角头部" : "直角头部";
+      const shapeLabel = detected.shape === "rounded" ? "圆角头部" : detected.shape === "arch" ? "拱形头部" : "直角头部";
       $("#importStatus").textContent = `版式分析完成 · ${LAYOUT_TEMPLATE_NAMES[detected.template]} · ${shapeLabel} · ${Math.round(detected.confidence * 100)}%`;
-      $("#importModal").hidden = true;
-      if ($("#mergeToggle").checked) {
-        $("#ocrModal").hidden = false;
-        $("#ocrText").value = "正在识别图片文字，请稍候…";
-        $("#ocrProgress span").style.width = "12%";
-        $("#ocrStatus").textContent = "正在加载 OCR 引擎";
-        try {
-          const preparedImage = await makeOcrFriendlyImage(file);
-          const result = await recognizeWithOcr(preparedImage);
-          const text = cleanOcrText(result.data.text || "");
-          importContext.text = text;
-          $("#ocrText").value = text || "未识别到清晰文字。请保留当前内容，或在此粘贴图片中的简历文字。";
-          $("#ocrStatus").textContent = "识别完成，请校对";
-          $("#ocrProgress span").style.width = "100%";
-        } catch (error) {
-          console.warn(error);
-          $("#ocrText").value = "OCR 引擎未能加载。你可以在这里粘贴图片中的简历文字，或取消后仅套用视觉样式。";
-          $("#ocrStatus").textContent = "OCR 不可用，可手动粘贴文字";
-          $("#ocrProgress span").style.width = "100%";
-        }
-      } else {
-        applyImportedStyle(false);
-      }
+      $("#importResultActions").hidden = false;
     } catch (error) {
       console.error(error);
       $("#importStatus").textContent = "图片分析失败，请换一张图片";
+      $("#chooseImageButton").textContent = "选择图片";
       toast("图片读取失败");
+    }
+  }
+
+  function useLocalLayout() {
+    if (!importContext.features) return toast("请先选择简历图片");
+    $("#importModal").hidden = true;
+    continueImageImport();
+  }
+
+  async function continueImageImport() {
+    if ($("#mergeToggle").checked) return startImportOcr();
+    applyImportedStyle(false);
+  }
+
+  async function startImportOcr() {
+    if (!importContext.file) return toast("请先选择简历图片");
+    $("#ocrModal").hidden = false;
+    $("#ocrText").value = "正在识别图片文字，请稍候…";
+    $("#ocrProgress span").style.width = "12%";
+    $("#ocrStatus").textContent = "正在加载 OCR 引擎";
+    try {
+      const preparedImage = await makeOcrFriendlyImage(importContext.file);
+      const result = await recognizeWithOcr(preparedImage);
+      const text = cleanOcrText(result.data.text || "");
+      importContext.text = text;
+      $("#ocrText").value = text || "未识别到清晰文字。请保留当前内容，或在此粘贴图片中的简历文字。";
+      $("#ocrStatus").textContent = "识别完成，请校对";
+      $("#ocrProgress span").style.width = "100%";
+    } catch (error) {
+      console.warn(error);
+      $("#ocrText").value = "OCR 引擎未能加载。你可以在这里粘贴图片中的简历文字，或取消后仅套用视觉样式。";
+      $("#ocrStatus").textContent = "OCR 不可用，可手动粘贴文字";
+      $("#ocrProgress span").style.width = "100%";
     }
   }
 
@@ -316,6 +333,8 @@
     state.headerShape = importContext.features.shape;
     state.density = importContext.features.density;
     state.accent = importContext.palette?.accent || state.accent;
+    if (importContext.features.margin) state.margin = importContext.features.margin;
+    if (typeof importContext.features.showPhoto === "boolean") state.showPhoto = importContext.features.showPhoto;
     if (withText) {
       const parsed = parseResumeText($("#ocrText").value);
       if (parsed) state = Object.assign(state, parsed, { photo: oldPhoto, accent: oldAccent });

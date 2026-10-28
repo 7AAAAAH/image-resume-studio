@@ -27,7 +27,12 @@ function loadApp() {
     setPath,
     classifyLayoutSignals,
     normalizeTemplate,
-    templateFromState
+    templateFromState,
+    defaultAiSettings,
+    resolvedAiSettings,
+    aiRequestFor,
+    extractJsonObject,
+    buildVisionPrompt
   };
 })();`;
   const testCode = code.replace(/\n\s*init\(\);\s*\n\}\)\(\);\s*$/, exportBlock);

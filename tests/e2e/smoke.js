@@ -87,6 +87,54 @@ async function main() {
     assert(state.avatar.startsWith("data:image/svg+xml;base64,"), "demo avatar should be embedded");
     assert(state.usage.length > 0, "page usage indicator missing");
 
+    const aiSettings = await evaluate(send, `(() => {
+      window.__aiFetchCalls = 0;
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (...args) => {
+        window.__aiFetchCalls += 1;
+        return originalFetch(...args);
+      };
+      document.querySelector('#moreButton').click();
+      document.querySelector('[data-action="ai-settings"]').click();
+      const modal = document.querySelector('#aiModal');
+      const defaults = {
+        open: !modal.hidden,
+        provider: document.querySelector('#aiProvider').value,
+        basePlaceholder: document.querySelector('#aiBase').placeholder,
+        modelPlaceholder: document.querySelector('#aiModel').placeholder,
+        hint: document.querySelector('#aiProviderHint').textContent
+      };
+      const provider = document.querySelector('#aiProvider');
+      provider.value = 'anthropic';
+      provider.dispatchEvent(new Event('change', { bubbles: true }));
+      const anthropic = {
+        basePlaceholder: document.querySelector('#aiBase').placeholder,
+        modelPlaceholder: document.querySelector('#aiModel').placeholder,
+        hint: document.querySelector('#aiProviderHint').textContent
+      };
+      provider.value = 'compatible';
+      provider.dispatchEvent(new Event('change', { bubbles: true }));
+      const compatible = {
+        basePlaceholder: document.querySelector('#aiBase').placeholder,
+        hint: document.querySelector('#aiProviderHint').textContent
+      };
+      modal.hidden = true;
+      document.querySelector('#aiAnalyzeButton').click();
+      const noKey = {
+        modalReopened: !document.querySelector('#aiModal').hidden,
+        fetchCalls: window.__aiFetchCalls
+      };
+      document.querySelector('#aiModal').hidden = true;
+      return { defaults, anthropic, compatible, noKey };
+    })()`);
+    assert(aiSettings.defaults.open, "AI settings modal did not open");
+    assert(aiSettings.defaults.provider === "openai", "unexpected default AI provider");
+    assert(aiSettings.defaults.basePlaceholder.includes("api.openai.com"), "OpenAI base placeholder missing");
+    assert(aiSettings.anthropic.modelPlaceholder.includes("claude"), "Claude model placeholder missing");
+    assert(aiSettings.compatible.basePlaceholder.includes("your-endpoint"), "compatible endpoint hint missing");
+    assert(aiSettings.noKey.modalReopened, "missing API key should reopen settings");
+    assert(aiSettings.noKey.fetchCalls === 0, "missing API key must not make a network call");
+
     const layout = await evaluate(send, `(async () => {
       async function make(kind) {
         const canvas = document.createElement("canvas");
@@ -210,7 +258,7 @@ async function main() {
     assert(errors.length === 0, `console errors: ${errors.length}`);
 
     console.log("E2E OK");
-    console.log(JSON.stringify({ ...state, layout, template, applied, exportedBytes: Buffer.byteLength(html) }, null, 2));
+    console.log(JSON.stringify({ ...state, aiSettings, layout, template, applied, exportedBytes: Buffer.byteLength(html) }, null, 2));
   } finally {
     try { ws?.close(); } catch {}
     browser.kill();

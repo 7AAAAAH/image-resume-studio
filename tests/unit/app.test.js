@@ -174,3 +174,57 @@ test("templateFromState exports a reusable style without resume content", () => 
   assert.ok(template.name.includes("左侧信息栏"));
   assert.equal(Object.prototype.hasOwnProperty.call(template, "basics"), false);
 });
+
+test("AI settings default to a safe, non-persistent OpenAI configuration", () => {
+  const defaults = app.defaultAiSettings();
+  assert.equal(defaults.provider, "openai");
+  assert.equal(defaults.base, "");
+  assert.equal(defaults.model, "");
+  assert.equal(defaults.apiKey, "");
+  assert.equal(defaults.remember, false);
+
+  const resolved = app.resolvedAiSettings(defaults);
+  assert.equal(resolved.base, "https://api.openai.com/v1");
+  assert.equal(resolved.model, "gpt-4.1-mini");
+});
+
+test("aiRequestFor builds OpenAI-compatible vision payloads", () => {
+  const request = app.aiRequestFor("openai", {
+    base: "https://api.example.com/v1/",
+    model: "vision-model",
+    apiKey: "test-key"
+  }, "data:image/png;base64,AAAA");
+
+  assert.equal(request.url, "https://api.example.com/v1/chat/completions");
+  assert.equal(request.headers.Authorization, "Bearer test-key");
+  assert.equal(request.body.model, "vision-model");
+  assert.equal(request.body.messages[0].content[1].image_url.url, "data:image/png;base64,AAAA");
+  assert.match(request.body.messages[0].content[0].text, /只输出严格 JSON/);
+});
+
+test("aiRequestFor builds Anthropic vision payloads", () => {
+  const request = app.aiRequestFor("anthropic", {
+    base: "https://api.anthropic.com/v1",
+    model: "claude-test",
+    apiKey: "anthropic-key"
+  }, "data:image/jpeg;base64,BBBB");
+
+  assert.equal(request.url, "https://api.anthropic.com/v1/messages");
+  assert.equal(request.headers["x-api-key"], "anthropic-key");
+  assert.equal(request.headers["anthropic-dangerous-direct-browser-access"], "true");
+  assert.equal(request.body.messages[0].content[0].source.media_type, "image/jpeg");
+  assert.equal(request.body.messages[0].content[0].source.data, "BBBB");
+});
+
+test("extractJsonObject tolerates fenced output and rejects malformed text", () => {
+  assert.deepEqual(
+    app.extractJsonObject('模型说明：\\n```json\\n{"layout":{"template":"sidebar"}}\\n```\\n完成'),
+    { layout: { template: "sidebar" } }
+  );
+  assert.deepEqual(
+    app.extractJsonObject('prefix {"theme":{"density":88}} suffix'),
+    { theme: { density: 88 } }
+  );
+  assert.equal(app.extractJsonObject("not json"), null);
+  assert.equal(app.extractJsonObject('{"broken":'), null);
+});
